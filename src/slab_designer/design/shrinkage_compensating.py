@@ -17,9 +17,17 @@ Design considerations:
 
 Figures 9.3 and 9.4 from ACI 360R-10 provide graphical relationships
 between prism expansion, reinforcement ratio, and slab expansion strain /
-internal compressive stress.  These cannot be digitised from the source PDF,
-so this module implements the analytical approach from ACI 223 where possible
-and notes where chart lookup is required.
+internal compressive stress.
+
+Appendix 5 provides two explicit Fig. A5.1 lookups for a 6 in. slab:
+  - ρ = 0.182%  -> ε_exp = 0.0454% for 0.05% prism expansion
+  - ρ = 0.241%  -> ε_exp = 0.0413% for 0.05% prism expansion
+
+This module uses those published values to calibrate a monotone interpolation
+table over the normal design range 0.15% to 0.60% reinforcement. Internal
+compressive stress remains a compatibility estimate, and the volume-surface
+ratio still needs a separate shrinkage-threshold digitization for a complete
+full-compensation check.
 """
 
 from __future__ import annotations
@@ -31,6 +39,23 @@ from pydantic import BaseModel, Field, field_validator
 
 from slab_designer.materials import Concrete
 from slab_designer.soil import Subgrade
+
+#
+# Fig. A5.1 / Fig. 9.3 member-expansion calibration
+#
+# The two published Appendix 5 lookups are exact anchors. The remaining points
+# extend those anchors with a monotone log-rho interpolation over the allowed
+# design range 0.15% to 0.60% reinforcement.
+#
+_FIG_A51_MEMBER_EXPANSION_FACTOR_TABLE: tuple[tuple[float, float], ...] = (
+    (0.00150, 0.964471),
+    (0.00182, 0.908000),
+    (0.00241, 0.826000),
+    (0.00300, 0.762049),
+    (0.00400, 0.678036),
+    (0.00500, 0.612871),
+    (0.00600, 0.559627),
+)
 
 
 class ShrinkageCompensatingDesign(BaseModel, frozen=True):
@@ -115,14 +140,7 @@ class ShrinkageCompensatingResult:
     """Required isolation joint width at slab perimeter, in.  Eq. (9-1)."""
 
     slab_expansion_strain: float
-    """Estimated slab expansion strain ε_slab (from Fig. 9.3 simplified).
-
-    This is a simplified estimate:
-      ε_slab ≈ prism_expansion_pct / 100 × reduction_factor(ρ, V/S)
-
-    The exact value requires Fig. 9.3 chart lookup in ACI 360R-10.
-    Use this as a first approximation; verify with ACI 223 charts.
-    """
+    """Estimated slab expansion strain ε_slab from the Fig. A5.1 lookup."""
 
     internal_compressive_stress_psi: float
     """Estimated internal compressive stress from expansion, psi.
@@ -145,29 +163,45 @@ def _estimate_slab_expansion_strain(
     rho: float,
     volume_surface_ratio: float,
 ) -> float:
-    """Simplified estimate of restrained slab expansion strain.
+    """Estimate slab expansion strain from the Fig. A5.1 calibrated lookup.
 
-    This approximates the ACI 360R-10 Fig. 9.3 relationship.
-    The actual design requires chart lookup.
+    ACI 360R-10 §9.4.2 states that slab expansion is determined from the known
+    prism expansion and the percentage of slab reinforcement. Appendix 5 then
+    provides explicit lookup values for ρ = 0.182% and ρ = 0.241% at 0.05%
+    prism expansion. This function interpolates the corresponding
+    member-expansion factor over the normal design range 0.15% to 0.60%.
 
-    Based on the relationship between prism expansion and slab expansion:
-      ε_slab ≈ ε_prism × C_vs × C_rho
-
-    where:
-      C_vs  = volume-surface correction (smaller V/S → more drying → less expansion)
-      C_rho = reinforcement stiffness reduction
-
-    Simplified linear approximation (NOT a substitute for Fig. 9.3):
-      ε_slab ≈ ε_prism × (1 - rho / 0.012) × (1 - (V/S - 6) * 0.02)
-
-    This is approximate. For design, use ACI 223 Fig. 9.3.
+    `volume_surface_ratio` is retained for API compatibility. It governs the
+    shrinkage-compensation target, not this member-expansion lookup.
     """
+    _ = volume_surface_ratio
     epsilon_prism = prism_expansion_pct / 100.0
-    # Reduction due to reinforcement restraint (higher rho → less slab expansion)
-    rho_factor = max(0.1, 1.0 - rho / 0.012)
-    # Small V/S correction (thinner slabs lose expansion faster)
-    vs_factor = max(0.5, 1.0 - (volume_surface_ratio - 6.0) * 0.02)
-    return epsilon_prism * rho_factor * vs_factor
+    return epsilon_prism * _member_expansion_factor(rho)
+
+
+def _member_expansion_factor(rho: float) -> float:
+    """Return the Fig. A5.1 member-expansion factor for a reinforcement ratio.
+
+    The factor is ε_member / ε_prism. Interpolation is linear in log(rho),
+    which matches the spacing behavior of the calibrated chart anchors more
+    closely than linear interpolation in rho.
+    """
+    table = _FIG_A51_MEMBER_EXPANSION_FACTOR_TABLE
+    if rho <= table[0][0]:
+        return table[0][1]
+    if rho >= table[-1][0]:
+        return table[-1][1]
+
+    for (rho_lo, factor_lo), (rho_hi, factor_hi) in zip(table, table[1:], strict=False):
+        if rho_lo <= rho <= rho_hi:
+            if rho == rho_lo:
+                return factor_lo
+            if rho == rho_hi:
+                return factor_hi
+            t = (math.log(rho) - math.log(rho_lo)) / (math.log(rho_hi) - math.log(rho_lo))
+            return factor_lo + t * (factor_hi - factor_lo)
+
+    raise RuntimeError(f"Failed to interpolate member-expansion factor for rho={rho:.6f}")
 
 
 def _estimate_compressive_stress(
@@ -274,7 +308,7 @@ def design_shrinkage_compensating(
             f"({'OK' if rho_ok else 'NG - check 0.0015–0.006 range'})"
         ),
         f"Estimated slab expansion strain: ε_slab ≈ {eps_slab:.5f}",
-        "  (Approximate – verify with ACI 360R-10 Fig. 9.3 chart lookup)",
+        "  (Fig. A5.1 calibrated lookup; Appendix 5 anchors at ρ = 0.182% and 0.241%)",
         f"Estimated internal compressive stress ≈ {sigma_c:.0f} psi",
         "  (Approximate – verify with ACI 360R-10 Fig. 9.4 chart lookup)",
         f"Isolation joint width = {jw:.3f} in "
@@ -284,6 +318,7 @@ def design_shrinkage_compensating(
         f"Maximum bar/wire spacing: {max_spacing:.1f} in",
         "Minimum 0.15% steel (without trial batch data) per ACI SP-64",
         "Two polyethylene sheets recommended (µ = 0.30) per §9.3.1",
+        "Volume-surface ratio still governs the shrinkage target / full-compensation check",
         "Allow 70% of max lab expansion before placing adjacent slab (§9.4.5)",
     ]
 

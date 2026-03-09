@@ -22,6 +22,7 @@ from slab_designer import (
 from slab_designer.design.shrinkage_compensating import (
     ShrinkageCompensatingDesign,
     _estimate_slab_expansion_strain,
+    _member_expansion_factor,
 )
 from slab_designer.soil import SlipSheet
 
@@ -99,6 +100,24 @@ def sc_design():
 
 
 class TestShrinkageCompensatingDesign:
+    def test_appendix_a5_unrestrained_lookup(self):
+        """Appendix 5: ρ = 0.182%, prism = 0.05% -> ε_exp = 0.0454%."""
+        eps = _estimate_slab_expansion_strain(
+            prism_expansion_pct=0.05,
+            rho=0.00182,
+            volume_surface_ratio=6.0,
+        )
+        assert abs(eps - 0.000454) < 1e-6
+
+    def test_appendix_a5_equivalent_restrained_lookup(self):
+        """Appendix 5: ρ_eq = 0.241%, prism = 0.05% -> ε_exp = 0.0413%."""
+        eps = _estimate_slab_expansion_strain(
+            prism_expansion_pct=0.05,
+            rho=0.00241,
+            volume_surface_ratio=6.0,
+        )
+        assert abs(eps - 0.000413) < 1e-6
+
     def test_prism_expansion_check(self, sc_design):
         result = design_shrinkage_compensating(sc_design)
         assert result.prism_ok  # 0.04% ≥ 0.03% minimum
@@ -176,6 +195,16 @@ class TestShrinkageCompensatingDesign:
 
 
 class TestShrinkageCompensatingProperties:
+    def test_member_expansion_factor_matches_appendix_anchors(self):
+        assert abs(_member_expansion_factor(0.00182) - 0.908) < 1e-9
+        assert abs(_member_expansion_factor(0.00241) - 0.826) < 1e-9
+
+    def test_volume_surface_ratio_does_not_change_member_expansion_lookup(self):
+        """ACI §9.4.2 uses prism expansion and reinforcement for slab expansion."""
+        eps_6 = _estimate_slab_expansion_strain(0.05, 0.00241, 6.0)
+        eps_3 = _estimate_slab_expansion_strain(0.05, 0.00241, 3.0)
+        assert abs(eps_6 - eps_3) < 1e-12
+
     @given(
         rho=st.floats(min_value=0.0015, max_value=0.006),
         prism=st.floats(min_value=0.03, max_value=0.10),
