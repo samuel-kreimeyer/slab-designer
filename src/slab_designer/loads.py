@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import math
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 class WheelLoad(BaseModel, frozen=True):
@@ -64,7 +64,7 @@ class WheelLoad(BaseModel, frozen=True):
         tire_pressure_psi: float = 100.0,
         wheel_spacing_in: float,
         is_dual_wheel: bool = False,
-    ) -> "WheelLoad":
+    ) -> WheelLoad:
         """Construct from lift-truck parameters.
 
         Contact area = axle_load / (2 * tire_pressure) per wheel
@@ -84,7 +84,7 @@ class WheelLoad(BaseModel, frozen=True):
         axle_load_kn: float,
         contact_area_mm2: float,
         wheel_spacing_mm: float,
-    ) -> "WheelLoad":
+    ) -> WheelLoad:
         from slab_designer.units import KN_TO_LB, MM_TO_IN
 
         return cls(
@@ -130,7 +130,7 @@ class RackLoad(BaseModel, frozen=True):
         base_plate_area_mm2: float,
         long_spacing_mm: float,
         short_spacing_mm: float,
-    ) -> "RackLoad":
+    ) -> RackLoad:
         from slab_designer.units import KN_TO_LB, MM_TO_IN
 
         return cls(
@@ -210,7 +210,7 @@ class LoadLocation(str):
 
 # Lift truck reference data from ACI 360R-10 Table 5.1
 # (capacity_lb, axle_load_range_lb, wheel_spacing_range_in)
-LIFT_TRUCK_TABLE: list[dict] = [
+LIFT_TRUCK_TABLE: list[dict[str, float]] = [
     {"capacity_lb": 2_000, "axle_load_lb": 6_400, "wheel_spacing_in": 28.0},
     {"capacity_lb": 3_000, "axle_load_lb": 8_600, "wheel_spacing_in": 30.0},
     {"capacity_lb": 5_000, "axle_load_lb": 12_700, "wheel_spacing_in": 33.0},

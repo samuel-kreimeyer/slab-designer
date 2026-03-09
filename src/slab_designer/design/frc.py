@@ -3,37 +3,24 @@
 ACI 360R-10, Chapter 11.
 
 Two design methods:
-  1. Elastic method (§11.3.3.2): Uses an enhanced allowable stress that
-     accounts for the post-crack residual strength of steel fibers.
-     The effective allowable flexural stress is:
-       fb = fr * (1 + Re,3 / 100)
-     This allows a thinner slab compared to unreinforced design by using
-     the same Westergaard analysis with higher allowable stress.
+  1. Elastic method (§11.3.3.2): Uses an allowable flexural stress based
+     on the equivalent flexural strength of the steel FRC:
+       fb = fr * Re,3 / 100
 
-  2. Yield-line method (§11.3.3.3, Meyerhof 1962 / Lösberg 1961):
-     Accounts for plastic redistribution through yield-line analysis.
-     Valid when Re,3 ≥ 30% (ACI 360R-10 requirement).
+  2. Yield-line method (§11.3.3.3): Accounts for plastic redistribution
+     through yield-line analysis. Valid when Re,3 ≥ 30%.
 
      Case 1 – Interior (central) load:
-       M₀ = fr * (1 + Re,3/100) * b * h² / 6
-       Po = 2π * (Mn + Mp)   for isotropic slab (Mn = Mp = M₀)
-          = 4π * M₀
+       Po = 6 * (1 + 2a/L) * M₀
+       M₀ = (1 + Re,3/100) * fr * b * h² / 6
 
      Case 2 – Edge load:
-       Po = (π + 4) * M₀
+       Po = 3.5 * (1 + 3a/L) * M₀
+       M₀ = (1 + Re,3/100) * fr * b * h² / 6
 
      Case 3 – Corner load:
-       Po = (π / 2 + 1) * M₀  [approximate]
-
-     Note: The exact ACI 360R-10 yield-line formulas (§11.3.3.3, Eqs. 11-1
-     to 11-3) could not be decoded from the source PDF.  The Meyerhof
-     formulas implemented here are the standard forms from the engineering
-     literature (TR-34, ACI 544.4R) and are consistent with the worked
-     example in Appendix 6 to within ±15%.
-
-     Load transfer at joints: applying a transfer fraction t_j (0–1),
-     the effective edge load = P / (1 - t_j).  ACI Appendix 6 example
-     uses 20% transfer (t_j = 0.20).
+       Po = 2 * (1 + 4a/L) * M₀
+       M₀ = fr * b * h² / 6
 
 References:
   - ACI 360R-10, Chapter 11 and Appendix 6
@@ -67,10 +54,10 @@ class YieldLineCase(str, Enum):
 # ---------------------------------------------------------------------------
 
 def frc_allowable_stress(fr: float, re3: float, safety_factor: float) -> float:
-    """Enhanced allowable flexural stress for steel FRC (elastic method).
+    """Allowable flexural stress for steel FRC (elastic method).
 
     ACI 360R-10 §11.3.3.2:
-      fb = fr * (1 + Re,3 / 100) / SF
+      fb = fr * Re,3 / 100 / SF
 
     Args:
         fr:            Modulus of rupture (plain concrete), psi.
@@ -80,11 +67,11 @@ def frc_allowable_stress(fr: float, re3: float, safety_factor: float) -> float:
     Returns:
         Allowable flexural tensile stress, psi.
     """
-    return fr * (1.0 + re3 / 100.0) / safety_factor
+    return fr * (re3 / 100.0) / safety_factor
 
 
 def enhancement_factor(re3: float) -> float:
-    """Fiber enhancement factor (1 + Re,3/100)."""
+    """Yield-line enhancement factor (1 + Re,3/100)."""
     return 1.0 + re3 / 100.0
 
 
@@ -97,7 +84,7 @@ def unit_moment_capacity(
     h: float,
     re3: float,
 ) -> float:
-    """Yield-line unit moment capacity M₀ per unit slab width, in·lb/in.
+    """Yield-line interior/edge unit moment capacity M₀ per unit slab width, in·lb/in.
 
     M₀ = fr * (1 + Re,3/100) * h² / 6
        = fr * enhancement_factor * S
@@ -116,6 +103,11 @@ def unit_moment_capacity(
     return fr * enhancement_factor(re3) * S
 
 
+def corner_unit_moment_capacity(fr: float, h: float) -> float:
+    """Yield-line corner unit moment capacity M₀ per unit slab width, in·lb/in."""
+    return fr * (h**2 / 6.0)
+
+
 # ---------------------------------------------------------------------------
 # Yield-line ultimate load capacity
 # ---------------------------------------------------------------------------
@@ -131,21 +123,15 @@ def yield_line_capacity(
 ) -> float:
     """Ultimate load capacity P₀ from yield-line analysis, lb.
 
-    Meyerhof (1962) / Lösberg (1961) formulas as used in TR-34:
+    ACI 360R-10 §11.3.3.3:
 
-      M₀ = fr * (1 + Re,3/100) * h² / 6
+      Interior: P₀ = 6 * (1 + 2a/L) * M₀
+      Edge:     P₀ = 3.5 * (1 + 3a/L) * M₀
+      Corner:   P₀ = 2 * (1 + 4a/L) * M₀
 
-      Case INTERIOR:  P₀ = 4π * M₀          (Mn = Mp = M₀, isotropic)
-      Case EDGE:      P₀ = (π + 4) * M₀     (free-edge boundary)
-      Case CORNER:    P₀ = (π/2 + 1) * M₀   (free-corner boundary)
-
-    A small correction for finite contact radius (a/L effect):
-      factor * (1 + a²/(2L²)) ≈ factor * (1 + ε) for typical a/L < 0.2
-
-    For EDGE with joint load transfer t_j:
-      The slab needs to carry only (1 - t_j) of the applied load:
-      Effective P_applied = P * (1 + t_j) for checking (the joint transfers
-      t_j fraction to the adjacent slab, so the edge only carries (1-t_j)).
+    with:
+      Interior/Edge: M₀ = (1 + Re,3/100) * fr * h² / 6
+      Corner:        M₀ = fr * h² / 6
 
     Args:
         fr:            Modulus of rupture, psi.
@@ -173,23 +159,15 @@ def yield_line_capacity(
             stacklevel=2,
         )
 
-    M0 = unit_moment_capacity(fr, h, re3)
-
-    # Small a/L correction factor (consistent with some ACI formulations)
-    aL_ratio = a / L
-    correction = 1.0 + aL_ratio**2 / 2.0  # conservative upper bound
-
     if case == YieldLineCase.INTERIOR:
-        # P₀ = 4π * M₀ * correction (for Mn = Mp, symmetric yield pattern)
-        factor = 4.0 * math.pi
+        M0 = unit_moment_capacity(fr, h, re3)
+        P0 = 6.0 * (1.0 + (2.0 * a / L)) * M0
     elif case == YieldLineCase.EDGE:
-        # P₀ = (π + 4) * M₀ * correction
-        factor = math.pi + 4.0
+        M0 = unit_moment_capacity(fr, h, re3)
+        P0 = 3.5 * (1.0 + (3.0 * a / L)) * M0
     else:  # CORNER
-        # P₀ = (π/2 + 1) * M₀ * correction  (one yield line to each edge)
-        factor = math.pi / 2.0 + 1.0
-
-    P0 = factor * M0 * correction
+        M0 = corner_unit_moment_capacity(fr, h)
+        P0 = 2.0 * (1.0 + (4.0 * a / L)) * M0
 
     # Apply joint load transfer to edge case
     if case == YieldLineCase.EDGE and joint_transfer > 0.0:
@@ -261,9 +239,9 @@ def design_frc_elastic(
 ) -> FRCDesignResult:
     """Design FRC slab thickness using the elastic method.
 
-    ACI 360R-10 §11.3.3.2.  Uses Westergaard interior formula with enhanced
-    allowable stress:
-      fb_allowable = fr * (1 + Re,3/100) / SF
+    ACI 360R-10 §11.3.3.2. Uses Westergaard interior formula with
+    equivalent flexural strength:
+      fb_allowable = fr * Re,3 / 100 / SF
 
     Args:
         load_lb:          Concentrated load (wheel or post), lb.
@@ -291,13 +269,12 @@ def design_frc_elastic(
 
     h_req = find_required_thickness(stress_fn, allowable, h_min, h_max)
 
-    L = radius_of_relative_stiffness(E, h_req, nu, k)
     M0 = unit_moment_capacity(concrete.fr, h_req, fibers.re3)
 
     notes = [
         f"Load: {load_lb:.0f} lb, contact radius: {a:.2f} in",
-        f"Re,3 = {fibers.re3:.0f}%, enhancement = {enhancement_factor(fibers.re3):.3f}",
-        f"fb_allowable = {allowable:.1f} psi (vs unreinforced {concrete.fr/safety_factor:.1f} psi)",
+        f"Re,3 = {fibers.re3:.0f}%",
+        f"fb_allowable = {allowable:.1f} psi",
     ]
 
     return FRCDesignResult(
@@ -367,7 +344,11 @@ def design_frc_yield_line(
 
     # Shrinkage/curling moment check: reduce effective capacity
     S = h_in**2 / 6.0
-    M0 = unit_moment_capacity(concrete.fr, h_in, fibers.re3)
+    M0 = (
+        unit_moment_capacity(concrete.fr, h_in, fibers.re3)
+        if case != YieldLineCase.CORNER
+        else corner_unit_moment_capacity(concrete.fr, h_in)
+    )
     if additional_moment_inlb_per_in > 0:
         # Reduce moment capacity by the locked-in shrinkage moment
         M0_effective = M0 - additional_moment_inlb_per_in
@@ -375,9 +356,15 @@ def design_frc_yield_line(
             P_allowable = 0.0
         else:
             # Recalculate P based on reduced M0
+            effective_re3 = fibers.re3 if case != YieldLineCase.CORNER else 0.0
             P_ult_eff = yield_line_capacity(
                 concrete.fr * (M0_effective / (concrete.fr * S)),  # effective fr
-                h_in, 0.0, a, L, case, joint_transfer
+                h_in,
+                effective_re3,
+                a,
+                L,
+                case,
+                joint_transfer,
             )
             P_allowable = P_ult_eff / safety_factor
 
@@ -449,8 +436,11 @@ def find_re3_for_load(
     Raises:
         ValueError: If Re,3 = 200% is still insufficient.
     """
-    # Binary search on Re,3
-    lo, hi = 0.0, 200.0
+    if case == YieldLineCase.CORNER:
+        return 0.0
+
+    # ACI 360R-10 §11.3.3.3 requires Re,3 > 30% for yield-line design.
+    lo, hi = 30.0, 200.0
 
     def capacity_at_re3(re3: float) -> float:
         result = design_frc_yield_line(

@@ -7,7 +7,7 @@ Test cases derived from:
 """
 
 import math
-import pytest
+
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -23,7 +23,6 @@ from slab_designer.analysis import (
     westergaard_edge_coe,
     westergaard_interior,
 )
-
 
 # ---------------------------------------------------------------------------
 # Radius of relative stiffness
@@ -327,7 +326,11 @@ class TestAllowableStress:
     def test_precompression_increases_allowable(self):
         """PT allowable = fr/SF + fp > fr/SF."""
         base = allowable_stress(fr=570.0, safety_factor=1.7)
-        pt = allowable_stress_with_precompression(fr=570.0, safety_factor=1.7, precompression_psi=100.0)
+        pt = allowable_stress_with_precompression(
+            fr=570.0,
+            safety_factor=1.7,
+            precompression_psi=100.0,
+        )
         assert pt > base
         assert abs(pt - (base + 100.0)) < 0.01
 

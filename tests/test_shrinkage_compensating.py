@@ -11,6 +11,7 @@ Eq. (9-1) example:
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
+from pydantic import ValidationError
 
 from slab_designer import (
     Concrete,
@@ -23,7 +24,6 @@ from slab_designer.design.shrinkage_compensating import (
     _estimate_slab_expansion_strain,
 )
 from slab_designer.soil import SlipSheet
-
 
 # ---------------------------------------------------------------------------
 # Isolation joint width (Eq. 9-1)
@@ -111,7 +111,7 @@ class TestShrinkageCompensatingDesign:
         """Reinforcement below minimum should raise validation error."""
         concrete = Concrete(fc=4000.0, fr=570.0)
         subgrade = Subgrade(k=100.0)
-        with pytest.raises(Exception):  # Pydantic validation error
+        with pytest.raises(ValidationError):
             ShrinkageCompensatingDesign(
                 slab_thickness_in=6.0,
                 slab_length_ft=100.0,
@@ -126,7 +126,7 @@ class TestShrinkageCompensatingDesign:
         """Prism expansion below 0.03% should raise validation error."""
         concrete = Concrete(fc=4000.0, fr=570.0)
         subgrade = Subgrade(k=100.0)
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             ShrinkageCompensatingDesign(
                 slab_thickness_in=6.0,
                 slab_length_ft=100.0,
@@ -185,9 +185,6 @@ class TestShrinkageCompensatingProperties:
     def test_higher_rho_lower_expansion(self, rho, prism, L):
         """Higher reinforcement ratio → lower slab expansion strain
         (more restraint reduces free expansion)."""
-        concrete = Concrete(fc=4000.0, fr=570.0)
-        subgrade = Subgrade(k=100.0)
-
         eps_low = _estimate_slab_expansion_strain(prism, rho, 6.0)
         eps_high = _estimate_slab_expansion_strain(prism, min(rho * 1.5, 0.006), 6.0)
         assert eps_high <= eps_low

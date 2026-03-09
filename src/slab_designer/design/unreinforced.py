@@ -1,10 +1,13 @@
 """Unreinforced (and reinforced-for-crack-width) slab thickness design.
 
-Three methods from ACI 360R-10, Chapter 7:
+Implemented Chapter 7 methods:
   - PCA method (§7.2.1): Interior loads; uses Westergaard interior formula.
-  - WRI method (§7.2.2): Interior loads; uses D/k stiffness parameter.
   - COE method (§7.2.3): Edge/joint loads; uses Westergaard edge formula
                           with 0.75 joint transfer and 25% impact factor.
+  - Aisle loading approximation aligned with PCA/WRI usage for §7.2.1.3 / §7.2.2.4.
+
+Not yet implemented:
+  - True WRI wheel-load thickness selection from D/k-based design charts.
 
 All three methods share the same basic approach:
   1. Select an allowable stress = fr / safety_factor.
@@ -23,18 +26,15 @@ This module provides:
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable
 
 from slab_designer.analysis import (
     AisleMoment,
-    WestergaardStress,
     allowable_stress,
     radius_of_relative_stiffness,
     westergaard_aisle,
-    westergaard_corner,
-    westergaard_edge,
     westergaard_edge_coe,
     westergaard_interior,
 )
@@ -226,6 +226,12 @@ def design_for_wheel_load(
     E = concrete.E
     nu = concrete.nu
     k = subgrade.k
+
+    if method == DesignMethod.WRI:
+        raise NotImplementedError(
+            "True WRI wheel-load design is not implemented. "
+            "Use DesignMethod.PCA or DesignMethod.COE."
+        )
 
     if method == DesignMethod.COE or load_case == LoadCase.EDGE:
         def stress_fn(h: float) -> float:
@@ -439,12 +445,12 @@ def check_thickness(
     Returns a DesignResult whose is_adequate property indicates pass/fail.
     """
     if isinstance(load, WheelLoad):
-        result = design_for_wheel_load(
+        design_for_wheel_load(
             load, concrete, subgrade, safety_factor, load_case=load_case,
             h_min=h - 0.01, h_max=h + 0.01
         )
     else:
-        result = design_for_rack_load(
+        design_for_rack_load(
             load, concrete, subgrade, safety_factor,
             h_min=h - 0.01, h_max=h + 0.01
         )

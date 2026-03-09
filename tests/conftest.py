@@ -1,6 +1,7 @@
 """Shared fixtures for the slab_designer test suite."""
 
 import pytest
+
 from slab_designer import Concrete, Subgrade
 
 

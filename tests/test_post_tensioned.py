@@ -2,90 +2,14 @@
 
 Reference: ACI 360R-10 Appendix 4 – Post-tensioning design examples.
 
-A4.1 example:
-  PT strip: 500 × 12 ft
-  Slab thickness: 6 in
-  Residual prestress: 250 psi
-  Friction µ: 0.5 (one poly sheet over long distances)
-  Pe: 26,000 lb/tendon
-  → Pr = 0.5 × Wslab × 500  (in lb/ft direction)
-  → Sten ≈ 0.95 ft = 11.4 in → use 11 in spacing
+These tests validate the Appendix 4 force balance directly:
 
-  Wslab = (6/12) × 150 = 75 lb/ft²
-  Pr = 0.5 × 75 × 500 = 18,750 lb/ft
-  Sten = 26,000 × 6 / (250 × 12 + 18,750) = 156,000 / (3000 + 18,750)
-       = 156,000 / 21,750 = 7.17 in
-
-  Wait – the appendix says Sten ≈ 11.4 in. Let me re-read.
-  Eq. (10-2): Sten = Pe / ((fp × W + Pr) / H)
-  Pr from Eq. (10-1) is in lb/ft.
-  Sten in ft: Sten = Pe / ((fp × W / H) + Pr / H × ft_to_in_factor?)
-
-  Actually: the formula says units work as:
-  Sten [ft] = Pe [lb] / ((fp [psi] × W [in/ft] + Pr [lb/ft]) / H [in])
-
-  Numerator: Pe = 26,000 lb
-  Denominator: (fp × W + Pr) / H = (250 × 12 + 18,750) / 6 = 21,750 / 6 = 3,625 lb/ft/in
-
-  Hmm, Sten [ft] = 26,000 / 3,625 = 7.17 ft → 86 in? That's way too large.
-
-  Let me re-read the equation. Eq. (10-2):
-  "Sten = Pe / ((fp × W + Pr) / H)"
-
-  The result "0.95 ft (11.4 in)" from the appendix suggests:
-  Sten [ft] = Pe / [(fp × W + Pr) / H]
-  0.95 = 26,000 / (...)
-  (...) = 26,000 / 0.95 = 27,368
-
-  If (...) = (fp × W + Pr) / H:
-  27,368 = (250 × 12 + Pr) / H
-  27,368 × 6 = 3000 + Pr
-  164,208 = 3000 + Pr
-  Pr = 161,208 lb/ft ???
-
-  That's too large. Let me think differently.
-
-  Maybe Pr in Eq. (10-2) is in lb/ft, W is in in/ft = 12, H is in in, and Sten is in ft.
-  Then the denominator (fp×W + Pr)/H has units:
-  (psi × in/ft + lb/ft) / in = (lb/in/ft + lb/ft) / in
-
-  Units don't work cleanly. Let me try Pr in lb/in:
-  Pr [lb/in] = 0.5 × 75/144 × 500 × 12 = ... that's complex.
-
-  Looking at this from the result: Sten = 0.95 ft = 11.4 in
-  If Sten is in ft: Pe / Sten_ft = 26,000 / 0.95 = 27,368
-  This must equal (fp × W + Pr) / H.
-
-  If Pr_per_in = Pr_per_ft / 12:
-  Pr_per_in = 18,750 / 12 = 1,562.5 lb/in
-  (fp × W + Pr_per_in) / H = (250 × 1 + 1,562.5) / 6 = 1,812.5 / 6 = 302.1 lb/in/in
-
-  Sten = Pe / 302.1 = 26,000 / 302.1 = 86 in → way too large.
-
-  Let me try: W = 1 ft (unit strip), H = 6 in, fp in psi, Pr in lb/ft:
-  Denominator = (fp × H_ft × 12 + Pr) / H_in ?? Very confused.
-
-  OK, let me try to match the result working backwards:
-  Sten = 11.4 in = 0.95 ft
-  Pe = 26,000 lb
-  force_per_unit_length = Pe / Sten = 26,000 / 0.95 ft = 27,368 lb/ft
-
-  This total force provides:
-  - fp × H_in × 12 in/ft = 250 × 6 × 12 = 18,000 lb/ft (residual compression component)
-  - Plus Pr = 18,750 lb/ft (friction)
-  Total = 36,750 lb/ft ≠ 27,368 lb/ft
-
-  Still not matching. I think the example in the appendix may have
-  different numbers than what I extracted. The exact equation from the
-  decoded source gives Sten ≈ 0.95 ft.
-
-  For now, I'll test the formula as implemented and verify it gives
-  physically sensible results.
+  Pr [lb/ft] = μ * Wslab [lb/ft²] * L [ft] / 2
+  required strip force [lb/ft] = Pr [lb/ft] + fp [psi] * h [in] * 12 [in/ft]
+  tendon spacing [ft] = Pe [lb] / required strip force [lb/ft]
 """
 
-import math
-import pytest
-from hypothesis import given, settings
+from hypothesis import given
 from hypothesis import strategies as st
 
 from slab_designer import (
@@ -100,7 +24,6 @@ from slab_designer.design.post_tensioned import (
     recommended_residual_prestress,
 )
 from slab_designer.soil import SlipSheet
-
 
 # ---------------------------------------------------------------------------
 # Recommended residual prestress
@@ -140,7 +63,7 @@ class TestRecommendedPrestress:
 
 class TestEq10_1:
     def test_appendix4_friction_force(self):
-        """A4.1: 500 ft slab, Wslab=75 lb/ft², µ=0.5 → Pr=18,750 lb/ft."""
+        """A4.1: 500 ft slab, Wslab=75 lb/ft², µ=0.5 → Pr=9,375 lb/ft."""
         concrete = Concrete(fc=4000.0, fr=570.0)
         subgrade = Subgrade(k=150.0, slip_sheet=SlipSheet.ONE_POLY, mu=0.5)
         tendon = PostTensionTendon(Pe=26_000.0)
@@ -153,8 +76,8 @@ class TestEq10_1:
             residual_prestress_psi=250.0,
         )
         result = design_post_tensioned(design)
-        # Wslab = (6/12) × 150 = 75 lb/ft²
-        expected_Pr = 0.5 * 75.0 * 500.0  # = 18,750 lb/ft
+        # Wslab = (6/12) × 150 = 75 lb/ft², and Eq. (A4-1) uses L / 2
+        expected_Pr = 0.5 * 75.0 * 500.0 / 2.0  # = 9,375 lb/ft
         assert abs(result.Pr_lb_ft - expected_Pr) < 10.0, (
             f"Pr = {result.Pr_lb_ft:.1f} lb/ft (expected {expected_Pr:.1f})"
         )
@@ -202,6 +125,44 @@ class TestEq10_1:
 # ---------------------------------------------------------------------------
 
 class TestEq10_2:
+    def test_spacing_matches_force_balance(self):
+        """Spacing equals tendon force divided by the required strip force."""
+        concrete = Concrete(fc=4000.0, fr=570.0)
+        subgrade = Subgrade(k=150.0, mu=0.5)
+        design = PostTensionedDesign(
+            slab_length_ft=500.0,
+            slab_thickness_in=6.0,
+            tendon=PostTensionTendon(Pe=26_000.0),
+            concrete=concrete,
+            subgrade=subgrade,
+            residual_prestress_psi=250.0,
+        )
+
+        result = design_post_tensioned(design)
+
+        expected_force = result.Pr_lb_ft + 250.0 * 6.0 * 12.0
+        expected_spacing_ft = 26_000.0 / expected_force
+
+        assert abs(result.required_force_lb_ft - expected_force) < 1e-6
+        assert abs(result.tendon_spacing_ft - expected_spacing_ft) < 1e-9
+
+    def test_appendix4_spacing_example(self):
+        """A4.1: 26 kip tendon, fp=250 psi, h=6 in, Pr=9375 lb/ft → 0.95 ft."""
+        concrete = Concrete(fc=4000.0, fr=570.0)
+        subgrade = Subgrade(k=150.0, slip_sheet=SlipSheet.ONE_POLY, mu=0.5)
+        design = PostTensionedDesign(
+            slab_length_ft=500.0,
+            slab_thickness_in=6.0,
+            tendon=PostTensionTendon(Pe=26_000.0),
+            concrete=concrete,
+            subgrade=subgrade,
+            residual_prestress_psi=250.0,
+        )
+
+        result = design_post_tensioned(design)
+        assert abs(result.tendon_spacing_ft - 0.95) < 0.01
+        assert abs(result.tendon_spacing_in - 11.4) < 0.2
+
     def test_larger_Pe_wider_spacing(self):
         """Stronger tendons → wider allowable spacing."""
         concrete = Concrete(fc=4000.0, fr=570.0)
@@ -265,6 +226,38 @@ class TestEq10_2:
         )
         result = design_post_tensioned(design)
         assert abs(result.tendon_spacing_in - result.tendon_spacing_ft * 12.0) < 1e-6
+
+    def test_net_precompression_matches_design_fp(self):
+        """Residual precompression property should report the design fp."""
+        concrete = Concrete(fc=4000.0, fr=570.0)
+        subgrade = Subgrade(k=150.0, mu=0.5)
+        design = PostTensionedDesign(
+            slab_length_ft=200.0,
+            slab_thickness_in=6.0,
+            tendon=PostTensionTendon(Pe=26_000.0),
+            concrete=concrete,
+            subgrade=subgrade,
+            residual_prestress_psi=175.0,
+        )
+
+        result = design_post_tensioned(design)
+        assert result.net_precompression_psi == 175.0
+
+    def test_gross_precompression_exceeds_residual_when_friction_exists(self):
+        """Gross strip compression includes both residual prestress and friction demand."""
+        concrete = Concrete(fc=4000.0, fr=570.0)
+        subgrade = Subgrade(k=150.0, mu=0.5)
+        design = PostTensionedDesign(
+            slab_length_ft=200.0,
+            slab_thickness_in=6.0,
+            tendon=PostTensionTendon(Pe=26_000.0),
+            concrete=concrete,
+            subgrade=subgrade,
+            residual_prestress_psi=125.0,
+        )
+
+        result = design_post_tensioned(design)
+        assert result.gross_precompression_psi > result.net_precompression_psi
 
 
 # ---------------------------------------------------------------------------

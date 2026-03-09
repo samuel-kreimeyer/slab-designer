@@ -77,7 +77,10 @@ class Subgrade(BaseModel, frozen=True):
         default=None,
         ge=0,
         le=3.0,
-        description="Friction coefficient (override).  If None, typical value from slip_sheet used.",
+        description=(
+            "Friction coefficient override. "
+            "If None, a typical value from slip_sheet is used."
+        ),
     )
 
     @property
@@ -92,7 +95,7 @@ class Subgrade(BaseModel, frozen=True):
         cls,
         soil_class: SubgradeClass,
         slip_sheet: SlipSheet = SlipSheet.NONE,
-    ) -> "Subgrade":
+    ) -> Subgrade:
         """Create subgrade from qualitative soil classification."""
         return cls(k=_K_TYPICAL[soil_class], slip_sheet=slip_sheet)
 
@@ -101,7 +104,7 @@ class Subgrade(BaseModel, frozen=True):
         cls,
         k_knm3: float,
         slip_sheet: SlipSheet = SlipSheet.NONE,
-    ) -> "Subgrade":
+    ) -> Subgrade:
         """Create from SI unit (kN/m³)."""
         from slab_designer.units import KNM3_TO_PCI
 

@@ -265,12 +265,18 @@ def design_shrinkage_compensating(
 
     notes = [
         f"Slab: {L_ft:.0f} ft × {design.slab_width_ft:.0f} ft × {h:.0f} in thick",
-        f"Prism expansion: {prism:.3f}% ({'OK' if prism_ok else 'NG - increase cement content/mix'})",
-        f"Reinforcement ratio ρ = {rho:.4f} ({'OK' if rho_ok else 'NG - check 0.0015–0.006 range'})",
+        (
+            f"Prism expansion: {prism:.3f}% "
+            f"({'OK' if prism_ok else 'NG - increase cement content/mix'})"
+        ),
+        (
+            f"Reinforcement ratio ρ = {rho:.4f} "
+            f"({'OK' if rho_ok else 'NG - check 0.0015–0.006 range'})"
+        ),
         f"Estimated slab expansion strain: ε_slab ≈ {eps_slab:.5f}",
-        f"  (Approximate – verify with ACI 360R-10 Fig. 9.3 chart lookup)",
+        "  (Approximate – verify with ACI 360R-10 Fig. 9.3 chart lookup)",
         f"Estimated internal compressive stress ≈ {sigma_c:.0f} psi",
-        f"  (Approximate – verify with ACI 360R-10 Fig. 9.4 chart lookup)",
+        "  (Approximate – verify with ACI 360R-10 Fig. 9.4 chart lookup)",
         f"Isolation joint width = {jw:.3f} in "
         f"({'one end' if design.expansion_at_one_end else 'two ends'} expansion)",
         f"  Use {math.ceil(jw * 4) / 4:.2f} in (rounded up to nearest 1/4 in)",

@@ -11,7 +11,7 @@ Two primary design approaches:
 Key equations (both decoded in ACI 360R-10 source):
 
   Eq. (10-1) – Subgrade friction force:
-    Pr = µ * Wslab * L_slab
+    Pr = µ * Wslab * L_slab / 2
     where:
       µ        = coefficient of friction (0.30–1.00)
       Wslab    = self-weight, lb/ft²
@@ -19,7 +19,7 @@ Key equations (both decoded in ACI 360R-10 source):
       Pr       = post-tensioning force required to overcome friction, lb/ft
 
   Eq. (10-2) – Tendon spacing:
-    Sten = Pe / ((fp * W + Pr) / H)
+    Sten = Pe / (fp * W * H + Pr)
     where:
       Pe   = effective prestress force per tendon, lb
       fp   = minimum residual prestress, psi
@@ -38,7 +38,6 @@ Recommended residual prestress levels (ACI 360R-10 Table 10.1):
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
 
 from pydantic import BaseModel, Field
@@ -50,8 +49,7 @@ from slab_designer.analysis import (
 )
 from slab_designer.materials import Concrete, PostTensionTendon
 from slab_designer.soil import Subgrade
-from slab_designer.units import CONCRETE_UNIT_WEIGHT_PCF, PCF_TO_PCI
-
+from slab_designer.units import CONCRETE_UNIT_WEIGHT_PCF
 
 # ---------------------------------------------------------------------------
 # Recommended residual prestress (ACI 360R-10 Table 10.1)
@@ -141,6 +139,9 @@ class PostTensionedResult:
     fp_psi: float
     """Residual prestress used in design, psi."""
 
+    required_force_lb_ft: float
+    """Total PT force demand per foot of slab width, lb/ft."""
+
     tendon_spacing_ft: float
     """Required tendon spacing to maintain fp and overcome friction, ft.  Eq. (10-2)."""
 
@@ -159,13 +160,14 @@ class PostTensionedResult:
 
     @property
     def net_precompression_psi(self) -> float:
-        """Net precompression delivered at slab centre, psi.
+        """Residual precompression maintained after friction losses, psi."""
+        return self.fp_psi
 
-        Approximate check: Pe × tendons_per_ft / H
-        """
-        H = self.design.slab_thickness_in
-        W = 12.0  # in/ft
-        return (self.design.tendon.Pe * (1.0 / self.tendon_spacing_ft)) / H
+    @property
+    def gross_precompression_psi(self) -> float:
+        """Gross average precompression from tendon force over a 1-ft slab strip, psi."""
+        strip_area_in2 = 12.0 * self.design.slab_thickness_in
+        return self.required_force_lb_ft / strip_area_in2
 
 
 # ---------------------------------------------------------------------------
@@ -243,15 +245,18 @@ def design_post_tensioned(design: PostTensionedDesign) -> PostTensionedResult:
     Pe = design.tendon.Pe
     fp = design.fp
     H = design.slab_thickness_in
-    W = 12.0  # in/ft (unit strip width)
+    strip_width_in = 12.0
 
-    # Eq. (10-1): Pr = µ * Wslab * L_slab
-    Pr = mu * Wslab * L_slab
+    # Eq. (10-1): Pr = µ * Wslab * L_slab / 2
+    Pr = mu * Wslab * L_slab / 2.0
 
-    # Eq. (10-2): Sten = Pe / ((fp * W + Pr) / H)
-    # = Pe * H / (fp * W + Pr)
-    denominator = (fp * W + Pr) / H
-    Sten_ft = Pe / denominator
+    # Force demand per foot of slab width:
+    #   residual compression = fp * H * 12  [lb/ft]
+    #   total PT demand      = residual compression + subgrade friction
+    required_force_lb_ft = fp * H * strip_width_in + Pr
+
+    # Tendon spacing in feet from tendon force divided by required strip force.
+    Sten_ft = Pe / required_force_lb_ft
     Sten_in = Sten_ft * 12.0
 
     L_in = radius_of_relative_stiffness(
@@ -262,17 +267,19 @@ def design_post_tensioned(design: PostTensionedDesign) -> PostTensionedResult:
         f"Slab: {L_slab:.0f} ft × {H:.0f} in thick",
         f"Self-weight: {Wslab:.1f} lb/ft²",
         f"Friction µ = {mu:.2f} ({design.subgrade.slip_sheet.value})",
-        f"Pr (Eq. 10-1) = {mu:.2f} × {Wslab:.1f} × {L_slab:.0f} = {Pr:.0f} lb/ft",
+        f"Pr (Eq. 10-1) = {mu:.2f} × {Wslab:.1f} × {L_slab:.0f} / 2 = {Pr:.0f} lb/ft",
         f"Residual prestress fp = {fp:.0f} psi",
         f"Pe = {Pe:.0f} lb/tendon",
-        f"Sten (Eq. 10-2) = {Pe:.0f} × {H:.0f} / ({fp:.0f} × {W:.0f} + {Pr:.0f})"
-        f" = {Sten_in:.1f} in = {Sten_ft:.2f} ft",
+        f"Required strip force = fp × h × 12 + Pr = {required_force_lb_ft:.0f} lb/ft",
+        f"Spacing = Pe / required strip force = {Pe:.0f} / {required_force_lb_ft:.0f}"
+        f" = {Sten_ft:.3f} ft = {Sten_in:.1f} in",
     ]
 
     return PostTensionedResult(
         design=design,
         Pr_lb_ft=Pr,
         fp_psi=fp,
+        required_force_lb_ft=required_force_lb_ft,
         tendon_spacing_ft=Sten_ft,
         tendon_spacing_in=Sten_in,
         L_in=L_in,

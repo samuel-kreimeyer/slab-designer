@@ -18,6 +18,7 @@ Reference examples from ACI 360R-10 Appendices 1 and 2:
 """
 
 import math
+
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
@@ -26,20 +27,15 @@ from slab_designer import (
     Concrete,
     RackLoad,
     Subgrade,
-    UniformLoad,
     WheelLoad,
     design_for_rack_load,
-    design_for_uniform_load,
     design_for_wheel_load,
-    find_required_thickness,
 )
 from slab_designer.analysis import (
     allowable_stress,
-    radius_of_relative_stiffness,
     westergaard_interior,
 )
 from slab_designer.design.unreinforced import DesignMethod, LoadCase
-
 
 # ---------------------------------------------------------------------------
 # ACI Appendix 1 – PCA wheel load example
@@ -93,7 +89,6 @@ class TestPCAWheelLoad:
     def test_adequate_at_chart_thickness(self, pca_wheel_setup):
         """At 7¾ in, the slab must satisfy the stress criterion."""
         load, concrete, subgrade = pca_wheel_setup
-        from slab_designer.analysis import westergaard_interior
 
         h = 7.75
         allowable = 570.0 / 1.7
@@ -158,7 +153,6 @@ class TestPCARackPost:
     def test_adequate_at_chart_thickness(self, pca_rack_setup):
         """At 8¼ in, the slab should be adequate."""
         load, concrete, subgrade = pca_rack_setup
-        from slab_designer.analysis import westergaard_interior
 
         h = 8.25
         allowable = 570.0 / 1.4
@@ -184,9 +178,7 @@ class TestWRIWheelLoad:
         """
         E = 3_000_000.0  # 3000 ksi
         h = 8.0
-        nu = 0.15  # WRI uses similar ν
         k = 400.0
-        L = radius_of_relative_stiffness(E, h, nu, k)
         # WRI uses D/k parameter where D = EI = Eh³/12
         # D = 3,000,000 × 8³/12 = 3M × 512/12 = 128M in²·lb/in
         D = E * h**3 / 12
@@ -216,6 +208,25 @@ class TestWRIWheelLoad:
         assert abs(result.required_thickness_in - chart_thickness) < 1.5, (
             f"Got {result.required_thickness_in:.2f} in, expected ≈ {chart_thickness} in"
         )
+
+    def test_explicit_wri_method_not_supported_for_wheel_loads(self):
+        """The WRI wheel chart method is not implemented and should fail explicitly."""
+        concrete = Concrete(fc=4000.0, fr=380.0, E=3_000_000.0, nu=0.15)
+        subgrade = Subgrade(k=400.0)
+        load = WheelLoad(
+            axle_load_lb=14_600.0,
+            contact_area_in2=28.0,
+            wheel_spacing_in=45.0,
+        )
+
+        with pytest.raises(NotImplementedError):
+            design_for_wheel_load(
+                load,
+                concrete,
+                subgrade,
+                safety_factor=2.0,
+                method=DesignMethod.WRI,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -324,7 +335,6 @@ class TestPTAllowableStress:
         The example then shows PT providing 250 psi precompression is adequate
         since 250 > (545 - 474) = 71 psi required.
         """
-        from slab_designer.analysis import westergaard_interior
 
         P = 15_000.0
         h = 6.0

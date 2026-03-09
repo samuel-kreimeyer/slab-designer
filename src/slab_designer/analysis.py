@@ -34,9 +34,7 @@ Westergaard equations used (PCA formulation for ν = 0.15):
 
   Case 4 – Aisle/partial uniform load, negative moment at aisle centre (Eq. 7-6):
     λ = (k / (4 * E * I)) ** 0.25   where I = h³/12 per unit width
-    Mc = (w * a / λ) * exp(-λ * a)  [Rice 1957, simplified form]
-    Note: The exact ACI 360R-10 Eq. (7-6) was not decoded from the PDF;
-          this expression is consistent with Hetenyi beam-on-foundation theory.
+    Mc = (w / (2 * λ²)) * exp(-λ * a) * sin(λ * a)
 
 Logarithms in Eq. (7-4) and (7-5) are base-10 per ACI 360R-10 §7.2 text.
 
@@ -50,7 +48,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-
 
 # ---------------------------------------------------------------------------
 # Core structural parameter
@@ -78,7 +75,7 @@ def radius_of_relative_stiffness(
     """
     numerator = E * h**3
     denominator = 12.0 * (1.0 - nu**2) * k
-    return (numerator / denominator) ** 0.25
+    return float((numerator / denominator) ** 0.25)
 
 
 # ---------------------------------------------------------------------------
@@ -286,13 +283,9 @@ def westergaard_aisle(
     ACI 360R-10, Case 4 – loads on both sides of a clear aisle.
     Produces tension at the TOP of the slab at the aisle centreline.
 
-    Formula (Hetenyi / Rice, beam-on-elastic-foundation):
+    Rice (1957) / ACI 360R-10 Eq. (7-6):
       λ = (k / (4EI)) ** 0.25  where I = h³/12 per unit width
-      Mc = (w / λ) * a * exp(-λ * a)
-
-    Note: This implements the simplified form. The exact ACI 360R-10 Eq. (7-6)
-    was not decoded from the source PDF; tables A1.2 and A2 (based on Hetenyi
-    1946) provide verified reference values for the PCA/WRI methods.
+      Mc = (w / (2 * λ²)) * exp(-λ * a) * sin(λ * a)
 
     Args:
         w:            Uniform load, psi (lb/in²).
@@ -305,10 +298,10 @@ def westergaard_aisle(
     Returns:
         AisleMoment with Mc in in·lb/in (positive = tension at top).
     """
-    I = h**3 / 12.0  # per unit width, in³/in
-    lam = (k / (4.0 * E * I)) ** 0.25  # in⁻¹
+    inertia = h**3 / 12.0  # per unit width, in³/in
+    lam = (k / (4.0 * E * inertia)) ** 0.25  # in⁻¹
     a = half_aisle_in
-    Mc = (w / lam) * a * math.exp(-lam * a)
+    Mc = (w / (2.0 * lam**2)) * math.exp(-lam * a) * math.sin(lam * a)
     L = radius_of_relative_stiffness(E, h, nu, k)
     return AisleMoment(
         h=h,

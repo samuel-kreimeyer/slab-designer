@@ -24,14 +24,14 @@ Usage examples:
 from __future__ import annotations
 
 import math
-from typing import Optional
+from typing import Any
 
 try:
     import typer
+    from rich import box
     from rich.console import Console
     from rich.panel import Panel
     from rich.table import Table
-    from rich import box
 except ImportError as e:
     raise ImportError(
         "CLI dependencies not installed. Run: pip install slab-designer[cli]"
@@ -45,20 +45,19 @@ from slab_designer import (
     Subgrade,
     UniformLoad,
     WheelLoad,
-    design_frc_elastic,
-    design_frc_yield_line,
     design_for_rack_load,
     design_for_uniform_load,
     design_for_wheel_load,
+    design_frc_elastic,
+    design_frc_yield_line,
     design_post_tensioned,
     isolation_joint_width,
 )
 from slab_designer.analysis import (
-    radius_of_relative_stiffness,
-    westergaard_interior,
-    westergaard_edge,
-    westergaard_corner,
     allowable_stress,
+    westergaard_corner,
+    westergaard_edge,
+    westergaard_interior,
 )
 from slab_designer.design.frc import YieldLineCase
 from slab_designer.soil import SlipSheet
@@ -79,12 +78,12 @@ def _concrete(fc: float, fr: float, E: float, nu: float) -> Concrete:
     return Concrete(fc=fc, fr=fr, E=E, nu=nu)
 
 
-def _subgrade(k: float, mu: Optional[float], slip_sheet: str) -> Subgrade:
+def _subgrade(k: float, mu: float | None, slip_sheet: str) -> Subgrade:
     ss = SlipSheet(slip_sheet) if slip_sheet in [s.value for s in SlipSheet] else SlipSheet.NONE
     return Subgrade(k=k, mu=mu, slip_sheet=ss)
 
 
-def _print_design_result(result, title: str) -> None:
+def _print_design_result(result: Any, title: str) -> None:
     """Pretty-print a DesignResult."""
     status = "[green]ADEQUATE[/green]" if result.is_adequate else "[red]INADEQUATE[/red]"
 
@@ -134,7 +133,7 @@ def wheel(
     sf: float = typer.Option(1.7, help="Factor of safety."),
     E: float = typer.Option(4_000_000.0, help="Elastic modulus, psi."),
     nu: float = typer.Option(0.15, help="Poisson's ratio."),
-    mu: Optional[float] = typer.Option(None, help="Friction coefficient override."),
+    mu: float | None = typer.Option(None, help="Friction coefficient override."),
     slip_sheet: str = typer.Option("none", help="Slip sheet type: none, one_poly, two_poly."),
     edge: bool = typer.Option(False, help="Use COE edge method instead of PCA interior."),
 ) -> None:
@@ -170,7 +169,7 @@ def rack(
     sf: float = typer.Option(1.4, help="Factor of safety."),
     E: float = typer.Option(4_000_000.0, help="Elastic modulus, psi."),
     nu: float = typer.Option(0.15, help="Poisson's ratio."),
-    k_sub: Optional[float] = typer.Option(None, hidden=True),
+    k_sub: float | None = typer.Option(None, hidden=True),
 ) -> None:
     """Design slab thickness for rack/post storage loads per ACI 360R-10 §7.2.1.2."""
     load = RackLoad(
@@ -227,7 +226,7 @@ def frc(
     nu: float = typer.Option(0.15, help="Poisson's ratio."),
     method: str = typer.Option("elastic", help="Design method: elastic or yield_line."),
     case: str = typer.Option("interior", help="Load case: interior, edge, or corner."),
-    h: Optional[float] = typer.Option(None, help="Slab thickness for yield-line check, in."),
+    h: float | None = typer.Option(None, help="Slab thickness for yield-line check, in."),
     transfer: float = typer.Option(0.0, help="Joint load transfer fraction (edge only)."),
     shrinkage: float = typer.Option(0.0, help="Shrinkage/curling moment, in·lb/in."),
 ) -> None:
@@ -299,7 +298,7 @@ def pt(
     k: float = typer.Option(150.0, help="Modulus of subgrade reaction, pci."),
     fr: float = typer.Option(570.0, help="Modulus of rupture, psi."),
     fc: float = typer.Option(4000.0, help="Concrete compressive strength, psi."),
-    fp: Optional[float] = typer.Option(None, help="Residual prestress override, psi."),
+    fp: float | None = typer.Option(None, help="Residual prestress override, psi."),
     mu: float = typer.Option(0.5, help="Subgrade friction coefficient."),
     slip_sheet: str = typer.Option("none", help="Slip sheet type: none, one_poly, two_poly."),
     industrial: bool = typer.Option(True, help="Industrial floor (affects recommended fp)."),
@@ -318,6 +317,7 @@ def pt(
         concrete=concrete,
         subgrade=subgrade,
         residual_prestress_psi=fp,
+        industrial=industrial,
     )
     result = design_post_tensioned(design)
 
@@ -334,7 +334,13 @@ def pt(
     )
     table.add_row("Radius of stiffness L", f"{result.L_in:.2f} in")
 
-    console.print(Panel(table, title="[bold]Post-Tensioned Slab Design[/bold]", border_style="blue"))
+    console.print(
+        Panel(
+            table,
+            title="[bold]Post-Tensioned Slab Design[/bold]",
+            border_style="blue",
+        )
+    )
     for note in result.notes:
         console.print(f"  [dim]• {note}[/dim]")
 
@@ -381,7 +387,13 @@ def analyze(
     table.add_row("Utilization", f"{ws.stress_psi/fa:.3f}")
     table.add_row("Status", status)
 
-    console.print(Panel(table, title="[bold]Westergaard Stress Analysis[/bold]", border_style="blue"))
+    console.print(
+        Panel(
+            table,
+            title="[bold]Westergaard Stress Analysis[/bold]",
+            border_style="blue",
+        )
+    )
 
 
 # ---------------------------------------------------------------------------

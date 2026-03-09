@@ -42,7 +42,7 @@ class Concrete(BaseModel, frozen=True):
         E: float = 4_000_000.0,
         nu: float = 0.15,
         fr_factor: float = 7.5,
-    ) -> "Concrete":
+    ) -> Concrete:
         """Create concrete with fr estimated from fc.
 
         ACI 318: fr = fr_factor * sqrt(fc), default fr_factor=7.5 (psi).
@@ -64,7 +64,7 @@ class Concrete(BaseModel, frozen=True):
         fr_mpa: float,
         E_mpa: float = 28_000.0,
         nu: float = 0.15,
-    ) -> "Concrete":
+    ) -> Concrete:
         """Create from SI units (MPa)."""
         from slab_designer.units import MPA_TO_PSI
 
@@ -100,7 +100,7 @@ class FiberProperties(BaseModel, frozen=True):
     )
 
     @model_validator(mode="after")
-    def check_re3_reasonable(self) -> "FiberProperties":
+    def check_re3_reasonable(self) -> FiberProperties:
         if self.re3 < 20:
             # ACI 360R-10 §11.3.3.3: Re,3 must be > 30% for yield-line method
             pass  # allow but note in design checks
