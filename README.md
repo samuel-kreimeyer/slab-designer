@@ -43,6 +43,7 @@ pip install -e .[dev]
 ```bash
 slab-designer --help
 slab-designer wheel --axle 22400 --contact 25 --spacing 40 --k 200 --fr 570
+slab-designer wheel --axle 14600 --contact 28 --spacing 45 --k 400 --fr 380 --sf 2.0 --method wri --e 3000000
 slab-designer rack --post 15500 --plate 36 --long 100 --short 40 --k 100 --fr 570
 slab-designer uniform --load 500 --aisle 10 --k 100 --fr 570
 slab-designer frc --load 15000 --contact 24 --re3 55 --k 100 --fr 550

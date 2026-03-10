@@ -139,6 +139,7 @@ def wheel(
     nu: float = typer.Option(0.15, help="Poisson's ratio."),
     mu: float | None = typer.Option(None, help="Friction coefficient override."),
     slip_sheet: str = typer.Option("none", help="Slip sheet type: none, one_poly, two_poly."),
+    method: str = typer.Option("pca", help="Wheel design method: pca, wri, or coe."),
     edge: bool = typer.Option(False, help="Use COE edge method instead of PCA interior."),
 ) -> None:
     """Design slab thickness for a wheel (axle) load per ACI 360R-10 §7.2.1."""
@@ -150,11 +151,34 @@ def wheel(
     concrete = _concrete(fc, fr, E, nu)
     subgrade = _subgrade(k, mu, slip_sheet)
 
-    from slab_designer.design.unreinforced import LoadCase
-    lc = LoadCase.EDGE if edge else LoadCase.INTERIOR
+    from slab_designer.design.unreinforced import DesignMethod, LoadCase
 
-    result = design_for_wheel_load(load, concrete, subgrade, safety_factor=sf, load_case=lc)
-    _print_design_result(result, "Wheel Load Design (PCA Method)")
+    method_map = {
+        "pca": DesignMethod.PCA,
+        "wri": DesignMethod.WRI,
+        "coe": DesignMethod.COE,
+    }
+    method_key = method.lower()
+    if method_key not in method_map:
+        console.print(f"[red]Unsupported wheel method '{method}'. Use pca, wri, or coe.[/red]")
+        raise typer.Exit(code=1)
+
+    if edge and method_key != "pca":
+        console.print("[red]--edge cannot be combined with --method other than pca.[/red]")
+        raise typer.Exit(code=1)
+
+    design_method = DesignMethod.COE if edge else method_map[method_key]
+    lc = LoadCase.EDGE if design_method == DesignMethod.COE else LoadCase.INTERIOR
+
+    result = design_for_wheel_load(
+        load,
+        concrete,
+        subgrade,
+        safety_factor=sf,
+        method=design_method,
+        load_case=lc,
+    )
+    _print_design_result(result, f"Wheel Load Design ({result.method.value} Method)")
 
 
 # ---------------------------------------------------------------------------
