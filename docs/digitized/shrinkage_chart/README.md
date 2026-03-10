@@ -10,6 +10,7 @@ Files:
 - `fig93-manifest.json`: combined machine-readable output
 - `validated_member_expansion_table.csv`: the current member-expansion interpolation table used in code
 - `validated_full_compensation_thresholds.csv`: the current digitized full-compensation threshold grid used in code
+- `validated_compressive_stress_table.csv`: the current digitized Fig. 9.4 compressive-stress surface used in code
 
 Status:
 - The ray detection is stable enough to reuse.
@@ -17,6 +18,7 @@ Status:
 - The labeled crossing table is still heuristic and should not yet be treated as validated design data.
 - The validated member-expansion table is anchored to the two explicit Appendix 5 values at `ρ = 0.182%` and `ρ = 0.241%`.
 - The validated full-compensation threshold grid is a direct interpolation surface from the Fig. 9.3 curve/ray intersections.
+- The compressive-stress surface is a coarse manual digitization over the practical slab range, not a high-resolution trace of the full figure.
 
 Use:
 ```bash

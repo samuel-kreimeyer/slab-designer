@@ -1,0 +1,25 @@
+rho,expansion_pct,compressive_stress_psi,source
+0.0015,0.00,0.0,coarse manual digitization from Fig. 9.4
+0.0015,0.02,8.0,coarse manual digitization from Fig. 9.4
+0.0015,0.04,17.0,coarse manual digitization from Fig. 9.4
+0.0015,0.06,25.0,coarse manual digitization from Fig. 9.4
+0.0015,0.08,33.0,coarse manual digitization from Fig. 9.4
+0.0015,0.10,41.0,coarse manual digitization from Fig. 9.4
+0.0025,0.00,0.0,coarse manual digitization from Fig. 9.4
+0.0025,0.02,14.0,coarse manual digitization from Fig. 9.4
+0.0025,0.04,27.0,coarse manual digitization from Fig. 9.4
+0.0025,0.06,40.0,coarse manual digitization from Fig. 9.4
+0.0025,0.08,51.0,coarse manual digitization from Fig. 9.4
+0.0025,0.10,62.0,coarse manual digitization from Fig. 9.4
+0.0050,0.00,0.0,coarse manual digitization from Fig. 9.4
+0.0050,0.02,24.0,coarse manual digitization from Fig. 9.4
+0.0050,0.04,49.0,coarse manual digitization from Fig. 9.4
+0.0050,0.06,73.0,coarse manual digitization from Fig. 9.4
+0.0050,0.08,98.0,coarse manual digitization from Fig. 9.4
+0.0050,0.10,124.0,coarse manual digitization from Fig. 9.4
+0.0100,0.00,0.0,coarse manual digitization from Fig. 9.4
+0.0100,0.02,46.0,coarse manual digitization from Fig. 9.4
+0.0100,0.04,94.0,coarse manual digitization from Fig. 9.4
+0.0100,0.06,141.0,coarse manual digitization from Fig. 9.4
+0.0100,0.08,150.0,coarse manual digitization from Fig. 9.4
+0.0100,0.10,150.0,coarse manual digitization from Fig. 9.4

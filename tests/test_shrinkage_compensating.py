@@ -22,6 +22,7 @@ from slab_designer import (
 from slab_designer.design.shrinkage_compensating import (
     ShrinkageCompensatingDesign,
     _estimate_slab_expansion_strain,
+    _interpolate_fig_94_stress,
     _member_expansion_factor,
     _required_member_expansion_strain,
     _required_prism_expansion_pct,
@@ -225,6 +226,21 @@ class TestShrinkageCompensatingProperties:
         thin = _required_member_expansion_strain(0.0015, 6.0)
         thick = _required_member_expansion_strain(0.0015, 1.5)
         assert thick > thin
+
+    def test_fig_94_stress_table_anchor_points(self):
+        assert abs(_interpolate_fig_94_stress(0.04, 0.0015) - 17.0) < 1e-9
+        assert abs(_interpolate_fig_94_stress(0.04, 0.0025) - 27.0) < 1e-9
+        assert abs(_interpolate_fig_94_stress(0.04, 0.0050) - 49.0) < 1e-9
+
+    def test_fig_94_stress_increases_with_expansion(self):
+        low = _interpolate_fig_94_stress(0.02, 0.0025)
+        high = _interpolate_fig_94_stress(0.06, 0.0025)
+        assert high > low
+
+    def test_fig_94_stress_increases_with_reinforcement(self):
+        low = _interpolate_fig_94_stress(0.04, 0.0015)
+        high = _interpolate_fig_94_stress(0.04, 0.0050)
+        assert high > low
 
     def test_low_prism_design_can_fail_full_compensation(self):
         concrete = Concrete(fc=4000.0, fr=570.0)

@@ -75,6 +75,17 @@ _FIG_93_REQUIRED_MEMBER_EXPANSION_PCT: dict[float, tuple[float, ...]] = {
     6.0: (0.02324, 0.02266, 0.01987, 0.01852, 0.01582),
 }
 
+_FIG_94_EXPANSION_PCT_POINTS: tuple[float, ...] = (0.00, 0.02, 0.04, 0.06, 0.08, 0.10)
+_FIG_94_RHO_POINTS: tuple[float, ...] = (0.0015, 0.0025, 0.0050, 0.0100)
+
+# Coarse manual digitization of Fig. 9.4 over the practical slab range.
+_FIG_94_COMPRESSIVE_STRESS_PSI: dict[float, tuple[float, ...]] = {
+    0.0015: (0.0, 8.0, 17.0, 25.0, 33.0, 41.0),
+    0.0025: (0.0, 14.0, 27.0, 40.0, 51.0, 62.0),
+    0.0050: (0.0, 24.0, 49.0, 73.0, 98.0, 124.0),
+    0.0100: (0.0, 46.0, 94.0, 141.0, 150.0, 150.0),
+}
+
 
 class ShrinkageCompensatingDesign(BaseModel, frozen=True):
     """Input parameters for shrinkage-compensating concrete slab.
@@ -306,17 +317,63 @@ def _estimate_compressive_stress(
     Es: float = 29_000_000.0,
     Ec: float = 4_000_000.0,
 ) -> float:
-    """Simplified estimate of internal compressive stress, psi.
+    """Estimate internal compressive stress from the digitized Fig. 9.4 table.
 
-    Based on compatibility: concrete compressive stress from restrained expansion.
-    σ_c = ε_slab × ρ × Es / (1 + n × ρ)
-    where n = Es / Ec (modular ratio).
-
-    This is a simplified estimate. Use ACI 360R-10 Fig. 9.4 for design.
+    The checked-in table is a coarse manual digitization over the practical
+    shrinkage-compensating slab range. `Es` and `Ec` are retained for API
+    compatibility but are not used by the chart-based estimate.
     """
-    n = Es / Ec
-    sigma = slab_expansion_strain * rho * Es / (1.0 + n * rho)
-    return sigma
+    _ = Es, Ec
+    expansion_pct = slab_expansion_strain * 100.0
+    return _interpolate_fig_94_stress(expansion_pct=expansion_pct, rho=rho)
+
+
+def _interpolate_fig_94_stress(expansion_pct: float, rho: float) -> float:
+    """Bilinear interpolation on the digitized Fig. 9.4 stress surface."""
+    expansion_points = _FIG_94_EXPANSION_PCT_POINTS
+    rho_points = _FIG_94_RHO_POINTS
+
+    x = min(max(expansion_pct, expansion_points[0]), expansion_points[-1])
+    r = min(max(rho, rho_points[0]), rho_points[-1])
+
+    def interp_expansion(values: tuple[float, ...]) -> float:
+        if x <= expansion_points[0]:
+            return values[0]
+        if x >= expansion_points[-1]:
+            return values[-1]
+        for (x_lo, value_lo), (x_hi, value_hi) in zip(
+            zip(expansion_points, values, strict=False),
+            zip(expansion_points[1:], values[1:], strict=False),
+            strict=False,
+        ):
+            if x_lo <= x <= x_hi:
+                if x == x_lo:
+                    return value_lo
+                if x == x_hi:
+                    return value_hi
+                t = (x - x_lo) / (x_hi - x_lo)
+                return value_lo + t * (value_hi - value_lo)
+        raise RuntimeError("Failed to interpolate Fig. 9.4 expansion coordinate")
+
+    if r <= rho_points[0]:
+        return interp_expansion(_FIG_94_COMPRESSIVE_STRESS_PSI[rho_points[0]])
+    if r >= rho_points[-1]:
+        return interp_expansion(_FIG_94_COMPRESSIVE_STRESS_PSI[rho_points[-1]])
+
+    lower_pairs = tuple(zip(rho_points, strict=False))
+    upper_pairs = tuple(zip(rho_points[1:], strict=False))
+    for (rho_lo,), (rho_hi,) in zip(lower_pairs, upper_pairs, strict=False):
+        if rho_lo <= r <= rho_hi:
+            stress_lo = interp_expansion(_FIG_94_COMPRESSIVE_STRESS_PSI[rho_lo])
+            stress_hi = interp_expansion(_FIG_94_COMPRESSIVE_STRESS_PSI[rho_hi])
+            if r == rho_lo:
+                return stress_lo
+            if r == rho_hi:
+                return stress_hi
+            t = (math.log(r) - math.log(rho_lo)) / (math.log(rho_hi) - math.log(rho_lo))
+            return stress_lo + t * (stress_hi - stress_lo)
+
+    raise RuntimeError("Failed to interpolate Fig. 9.4 rho coordinate")
 
 
 def isolation_joint_width(

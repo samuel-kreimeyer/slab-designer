@@ -209,8 +209,8 @@ class TestWRIWheelLoad:
             f"Got {result.required_thickness_in:.2f} in, expected ≈ {chart_thickness} in"
         )
 
-    def test_explicit_wri_method_not_supported_for_wheel_loads(self):
-        """The WRI wheel chart method is not implemented and should fail explicitly."""
+    def test_explicit_wri_method_matches_appendix_thickness(self):
+        """The explicit WRI method should track the Appendix A2.2 example."""
         concrete = Concrete(fc=4000.0, fr=380.0, E=3_000_000.0, nu=0.15)
         subgrade = Subgrade(k=400.0)
         load = WheelLoad(
@@ -218,15 +218,16 @@ class TestWRIWheelLoad:
             contact_area_in2=28.0,
             wheel_spacing_in=45.0,
         )
-
-        with pytest.raises(NotImplementedError):
-            design_for_wheel_load(
-                load,
-                concrete,
-                subgrade,
-                safety_factor=2.0,
-                method=DesignMethod.WRI,
-            )
+        result = design_for_wheel_load(
+            load,
+            concrete,
+            subgrade,
+            safety_factor=2.0,
+            method=DesignMethod.WRI,
+        )
+        assert result.method == DesignMethod.WRI
+        assert result.load_case == LoadCase.INTERIOR
+        assert abs(result.required_thickness_in - 7.875) < 0.35
 
 
 # ---------------------------------------------------------------------------
