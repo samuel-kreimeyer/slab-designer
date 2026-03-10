@@ -13,6 +13,7 @@ def test_top_level_exports_cover_core_entry_points():
     assert callable(slab_designer.design_shrinkage_compensating)
     assert callable(slab_designer.isolation_joint_width)
     assert slab_designer.PostTensionedDesign is not None
+    assert slab_designer.ShrinkageCompensatingDesign is not None
     assert slab_designer.DesignResult is not None
     assert slab_designer.FRCDesignResult is not None
     assert slab_designer.PostTensionedResult is not None

@@ -72,6 +72,7 @@ from slab_designer.design import (
     PostTensionedDesign,
     PostTensionedResult,
     SafetyFactors,
+    ShrinkageCompensatingDesign,
     ShrinkageCompensatingResult,
     design_for_rack_load,
     design_for_uniform_load,
@@ -129,6 +130,7 @@ __all__ = [
     "DesignResult",
     "PostTensionedResult",
     "FRCDesignResult",
+    "ShrinkageCompensatingDesign",
     "ShrinkageCompensatingResult",
     # Helpers
     "SafetyFactors",

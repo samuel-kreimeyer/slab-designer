@@ -12,6 +12,7 @@ from slab_designer.design.post_tensioned import (
     design_post_tensioned,
 )
 from slab_designer.design.shrinkage_compensating import (
+    ShrinkageCompensatingDesign,
     ShrinkageCompensatingResult,
     design_shrinkage_compensating,
     isolation_joint_width,
@@ -43,6 +44,7 @@ __all__ = [
     "design_frc_yield_line",
     "find_re3_for_load",
     # Shrinkage-compensating
+    "ShrinkageCompensatingDesign",
     "ShrinkageCompensatingResult",
     "design_shrinkage_compensating",
     "isolation_joint_width",
