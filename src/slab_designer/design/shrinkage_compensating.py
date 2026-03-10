@@ -57,6 +57,24 @@ _FIG_A51_MEMBER_EXPANSION_FACTOR_TABLE: tuple[tuple[float, float], ...] = (
     (0.00600, 0.559627),
 )
 
+_FIG_93_RHO_POINTS: tuple[float, ...] = (0.0010, 0.0015, 0.0050, 0.0100, 0.0200)
+_FIG_93_VS_POINTS: tuple[float, ...] = (1.5, 3.0, 4.5, 6.0)
+
+# Digitized from the Fig. 9.3 curve/ray intersections.
+_FIG_93_REQUIRED_PRISM_EXPANSION_PCT: dict[float, tuple[float, ...]] = {
+    1.5: (0.02904, 0.03663, 0.05201, 0.06163, 0.06575),
+    3.0: (0.02445, 0.03090, 0.04431, 0.05765, 0.06087),
+    4.5: (0.02032, 0.02541, 0.03715, 0.04734, 0.05368),
+    6.0: (0.01835, 0.02313, 0.03062, 0.04100, 0.04815),
+}
+
+_FIG_93_REQUIRED_MEMBER_EXPANSION_PCT: dict[float, tuple[float, ...]] = {
+    1.5: (0.03677, 0.03588, 0.03375, 0.02783, 0.02161),
+    3.0: (0.03097, 0.03027, 0.02876, 0.02604, 0.02000),
+    4.5: (0.02574, 0.02489, 0.02411, 0.02138, 0.01764),
+    6.0: (0.02324, 0.02266, 0.01987, 0.01852, 0.01582),
+}
+
 
 class ShrinkageCompensatingDesign(BaseModel, frozen=True):
     """Input parameters for shrinkage-compensating concrete slab.
@@ -142,6 +160,15 @@ class ShrinkageCompensatingResult:
     slab_expansion_strain: float
     """Estimated slab expansion strain ε_slab from the Fig. A5.1 lookup."""
 
+    required_prism_expansion_pct: float
+    """Digitized Fig. 9.3 prism-expansion threshold for full compensation, %."""
+
+    required_member_expansion_strain: float
+    """Digitized Fig. 9.3 member-expansion threshold for full compensation."""
+
+    full_compensation_ok: bool
+    """True if the estimated slab expansion exceeds the digitized threshold."""
+
     internal_compressive_stress_psi: float
     """Estimated internal compressive stress from expansion, psi.
 
@@ -202,6 +229,75 @@ def _member_expansion_factor(rho: float) -> float:
             return factor_lo + t * (factor_hi - factor_lo)
 
     raise RuntimeError(f"Failed to interpolate member-expansion factor for rho={rho:.6f}")
+
+
+def _interpolate_fig_93_surface(
+    rho: float,
+    volume_surface_ratio: float,
+    surface: dict[float, tuple[float, ...]],
+) -> float:
+    """Bilinear interpolation on the digitized Fig. 9.3 threshold surface."""
+    rho_points = _FIG_93_RHO_POINTS
+    vs_points = _FIG_93_VS_POINTS
+
+    rho = min(max(rho, rho_points[0]), rho_points[-1])
+    vs = min(max(volume_surface_ratio, vs_points[0]), vs_points[-1])
+
+    vs_lo = vs_points[0]
+    vs_hi = vs_points[-1]
+    for lo, hi in zip(vs_points, vs_points[1:], strict=False):
+        if lo <= vs <= hi:
+            vs_lo = lo
+            vs_hi = hi
+            break
+
+    def interp_rho(values: tuple[float, ...]) -> float:
+        if rho <= rho_points[0]:
+            return values[0]
+        if rho >= rho_points[-1]:
+            return values[-1]
+        lower_pairs = tuple(zip(rho_points, values, strict=False))
+        upper_pairs = tuple(zip(rho_points[1:], values[1:], strict=False))
+        for (rho_lo, value_lo), (rho_hi, value_hi) in zip(
+            lower_pairs,
+            upper_pairs,
+            strict=False,
+        ):
+            if rho_lo <= rho <= rho_hi:
+                if rho == rho_lo:
+                    return value_lo
+                if rho == rho_hi:
+                    return value_hi
+                t = (math.log(rho) - math.log(rho_lo)) / (math.log(rho_hi) - math.log(rho_lo))
+                return value_lo + t * (value_hi - value_lo)
+        raise RuntimeError("Failed to interpolate Fig. 9.3 rho coordinate")
+
+    value_lo = interp_rho(surface[vs_lo])
+    value_hi = interp_rho(surface[vs_hi])
+    if vs_lo == vs_hi:
+        return value_lo
+
+    t_vs = (vs - vs_lo) / (vs_hi - vs_lo)
+    return value_lo + t_vs * (value_hi - value_lo)
+
+
+def _required_prism_expansion_pct(rho: float, volume_surface_ratio: float) -> float:
+    """Return the digitized Fig. 9.3 prism-expansion threshold, %."""
+    return _interpolate_fig_93_surface(
+        rho=rho,
+        volume_surface_ratio=volume_surface_ratio,
+        surface=_FIG_93_REQUIRED_PRISM_EXPANSION_PCT,
+    )
+
+
+def _required_member_expansion_strain(rho: float, volume_surface_ratio: float) -> float:
+    """Return the digitized Fig. 9.3 member-expansion threshold, strain."""
+    required_pct = _interpolate_fig_93_surface(
+        rho=rho,
+        volume_surface_ratio=volume_surface_ratio,
+        surface=_FIG_93_REQUIRED_MEMBER_EXPANSION_PCT,
+    )
+    return required_pct / 100.0
 
 
 def _estimate_compressive_stress(
@@ -282,6 +378,9 @@ def design_shrinkage_compensating(
     eps_slab = _estimate_slab_expansion_strain(
         prism, rho, design.volume_surface_ratio
     )
+    required_prism_pct = _required_prism_expansion_pct(rho, design.volume_surface_ratio)
+    required_member_eps = _required_member_expansion_strain(rho, design.volume_surface_ratio)
+    full_compensation_ok = eps_slab >= required_member_eps
 
     # Estimate compressive stress
     sigma_c = _estimate_compressive_stress(
@@ -309,6 +408,12 @@ def design_shrinkage_compensating(
         ),
         f"Estimated slab expansion strain: ε_slab ≈ {eps_slab:.5f}",
         "  (Fig. A5.1 calibrated lookup; Appendix 5 anchors at ρ = 0.182% and 0.241%)",
+        f"Digitized full-compensation prism threshold ≈ {required_prism_pct:.4f}%",
+        f"Digitized full-compensation member threshold ≈ {required_member_eps:.5f}",
+        (
+            f"Full shrinkage compensation: {'OK' if full_compensation_ok else 'NG'} "
+            f"for V/S = {design.volume_surface_ratio:.2f}"
+        ),
         f"Estimated internal compressive stress ≈ {sigma_c:.0f} psi",
         "  (Approximate – verify with ACI 360R-10 Fig. 9.4 chart lookup)",
         f"Isolation joint width = {jw:.3f} in "
@@ -318,7 +423,6 @@ def design_shrinkage_compensating(
         f"Maximum bar/wire spacing: {max_spacing:.1f} in",
         "Minimum 0.15% steel (without trial batch data) per ACI SP-64",
         "Two polyethylene sheets recommended (µ = 0.30) per §9.3.1",
-        "Volume-surface ratio still governs the shrinkage target / full-compensation check",
         "Allow 70% of max lab expansion before placing adjacent slab (§9.4.5)",
     ]
 
@@ -328,6 +432,9 @@ def design_shrinkage_compensating(
         prism_ok=prism_ok,
         isolation_joint_width_in=jw,
         slab_expansion_strain=eps_slab,
+        required_prism_expansion_pct=required_prism_pct,
+        required_member_expansion_strain=required_member_eps,
+        full_compensation_ok=full_compensation_ok,
         internal_compressive_stress_psi=sigma_c,
         reinforcement_depth_in=depth_from_top,
         max_bar_spacing_in=max_spacing,

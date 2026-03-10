@@ -23,6 +23,8 @@ from slab_designer.design.shrinkage_compensating import (
     ShrinkageCompensatingDesign,
     _estimate_slab_expansion_strain,
     _member_expansion_factor,
+    _required_member_expansion_strain,
+    _required_prism_expansion_pct,
 )
 from slab_designer.soil import SlipSheet
 
@@ -182,6 +184,15 @@ class TestShrinkageCompensatingDesign:
         result = design_shrinkage_compensating(sc_design)
         assert result.internal_compressive_stress_psi > 0
 
+    def test_full_compensation_thresholds_positive(self, sc_design):
+        result = design_shrinkage_compensating(sc_design)
+        assert result.required_prism_expansion_pct > 0
+        assert result.required_member_expansion_strain > 0
+
+    def test_typical_sc_design_meets_full_compensation(self, sc_design):
+        result = design_shrinkage_compensating(sc_design)
+        assert result.full_compensation_ok
+
     def test_max_bar_spacing(self, sc_design):
         """Max bar spacing = min(3h, 14) = min(18, 14) = 14 in."""
         result = design_shrinkage_compensating(sc_design)
@@ -204,6 +215,33 @@ class TestShrinkageCompensatingProperties:
         eps_6 = _estimate_slab_expansion_strain(0.05, 0.00241, 6.0)
         eps_3 = _estimate_slab_expansion_strain(0.05, 0.00241, 3.0)
         assert abs(eps_6 - eps_3) < 1e-12
+
+    def test_required_prism_threshold_increases_with_higher_rho(self):
+        low = _required_prism_expansion_pct(0.0015, 6.0)
+        high = _required_prism_expansion_pct(0.0050, 6.0)
+        assert high > low
+
+    def test_required_member_threshold_increases_for_lower_vs_ratio(self):
+        thin = _required_member_expansion_strain(0.0015, 6.0)
+        thick = _required_member_expansion_strain(0.0015, 1.5)
+        assert thick > thin
+
+    def test_low_prism_design_can_fail_full_compensation(self):
+        concrete = Concrete(fc=4000.0, fr=570.0)
+        subgrade = Subgrade(k=100.0, slip_sheet=SlipSheet.TWO_POLY)
+        design = ShrinkageCompensatingDesign(
+            slab_thickness_in=6.0,
+            slab_length_ft=120.0,
+            slab_width_ft=100.0,
+            prism_expansion_pct=0.03,
+            rho=0.0060,
+            volume_surface_ratio=1.5,
+            concrete=concrete,
+            subgrade=subgrade,
+            expansion_at_one_end=True,
+        )
+        result = design_shrinkage_compensating(design)
+        assert not result.full_compensation_ok
 
     @given(
         rho=st.floats(min_value=0.0015, max_value=0.006),
