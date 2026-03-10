@@ -95,6 +95,12 @@ class DesignResult:
 
     method: DesignMethod
     load_case: LoadCase
+    validation_status: str
+    """Validation basis: equation-based, approximate, or fitted."""
+
+    model_basis: str
+    """Short description of the governing analytical or chart-calibrated model."""
+
     required_thickness_in: float
     """Minimum slab thickness satisfying the design criterion, in."""
 
@@ -271,6 +277,11 @@ def design_for_wheel_load(
 
         result_case = LoadCase.EDGE
         used_method = DesignMethod.COE
+        validation_status = "equation-based"
+        model_basis = (
+            "ACI 360R-10 COE edge/joint procedure using Westergaard edge stress "
+            "with impact and joint-transfer modifiers"
+        )
     elif method == DesignMethod.WRI:
         def stress_fn(h: float) -> float:
             basic_moment_per_kip, L = _wri_basic_moment_per_kip(h, a, k, E, nu)
@@ -284,6 +295,11 @@ def design_for_wheel_load(
 
         result_case = LoadCase.INTERIOR
         used_method = DesignMethod.WRI
+        validation_status = "fitted"
+        model_basis = (
+            "ACI 360R-10 Appendix A2.2 calibrated fit to the WRI basic and "
+            "additional wheel moment charts"
+        )
     else:
         # PCA interior: primary wheel + contribution from second wheel
         def stress_fn(h: float) -> float:
@@ -304,6 +320,11 @@ def design_for_wheel_load(
 
         result_case = LoadCase.INTERIOR
         used_method = DesignMethod.PCA
+        validation_status = "approximate"
+        model_basis = (
+            "Westergaard interior stress with spacing-based secondary-wheel "
+            "superposition to track PCA wheel charts"
+        )
 
     h_req = find_required_thickness(stress_fn, allowable, h_min, h_max)
     final_stress = stress_fn(h_req)
@@ -326,6 +347,8 @@ def design_for_wheel_load(
     return DesignResult(
         method=used_method,
         load_case=result_case,
+        validation_status=validation_status,
+        model_basis=model_basis,
         required_thickness_in=h_req,
         computed_stress_psi=final_stress,
         allowable_stress_psi=allowable,
@@ -400,6 +423,11 @@ def design_for_rack_load(
     return DesignResult(
         method=DesignMethod.PCA,
         load_case=LoadCase.INTERIOR,
+        validation_status="approximate",
+        model_basis=(
+            "Westergaard interior stress with spacing-based post-interaction "
+            "superposition to track PCA rack-post charts"
+        ),
         required_thickness_in=h_req,
         computed_stress_psi=final_stress,
         allowable_stress_psi=allowable,
@@ -465,6 +493,11 @@ def design_for_uniform_load(
     return DesignResult(
         method=DesignMethod.WRI,
         load_case=LoadCase.AISLE,
+        validation_status="equation-based",
+        model_basis=(
+            "ACI 360R-10 Chapter 7 aisle-loading equation using the Rice/Hetenyi "
+            "top-tension moment relationship"
+        ),
         required_thickness_in=h_req,
         computed_stress_psi=final_stress,
         allowable_stress_psi=allowable,
@@ -521,6 +554,8 @@ def check_thickness(
     return DesignResult(
         method=DesignMethod.WESTERGAARD,
         load_case=load_case,
+        validation_status="equation-based",
+        model_basis="Direct Westergaard stress check at the specified slab thickness",
         required_thickness_in=h,
         computed_stress_psi=stress,
         allowable_stress_psi=allowable,

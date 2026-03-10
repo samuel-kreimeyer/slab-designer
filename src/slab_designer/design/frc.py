@@ -196,6 +196,12 @@ class FRCDesignResult:
     case: YieldLineCase | str
     """Load position."""
 
+    validation_status: str
+    """Validation basis: equation-based or mixed."""
+
+    model_basis: str
+    """Short description of the governing Chapter 11 / Appendix 6 method."""
+
     h_in: float
     """Slab thickness, in."""
 
@@ -280,6 +286,11 @@ def design_frc_elastic(
     return FRCDesignResult(
         method="elastic",
         case="interior",
+        validation_status="equation-based",
+        model_basis=(
+            "ACI 360R-10 Chapter 11 elastic method using Westergaard interior "
+            "stress and fb = fr * Re,3 / SF"
+        ),
         h_in=h_req,
         fr_psi=concrete.fr,
         re3=fibers.re3,
@@ -386,6 +397,11 @@ def design_frc_yield_line(
     return FRCDesignResult(
         method="yield_line",
         case=case,
+        validation_status="equation-based",
+        model_basis=(
+            "ACI 360R-10 Chapter 11 / Appendix 6 yield-line capacity equations "
+            "for interior, edge, and corner loading"
+        ),
         h_in=h_in,
         fr_psi=concrete.fr,
         re3=fibers.re3,

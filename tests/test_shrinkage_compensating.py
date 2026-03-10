@@ -123,6 +123,8 @@ class TestShrinkageCompensatingDesign:
 
     def test_prism_expansion_check(self, sc_design):
         result = design_shrinkage_compensating(sc_design)
+        assert result.validation_status == "digitized"
+        assert "digitized ACI 360R-10 Fig. 9.3 and Fig. 9.4" in result.model_basis
         assert result.prism_ok  # 0.04% ≥ 0.03% minimum
 
     def test_rho_check_minimum(self, sc_design):

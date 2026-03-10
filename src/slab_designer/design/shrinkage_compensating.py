@@ -24,10 +24,9 @@ Appendix 5 provides two explicit Fig. A5.1 lookups for a 6 in. slab:
   - ρ = 0.241%  -> ε_exp = 0.0413% for 0.05% prism expansion
 
 This module uses those published values to calibrate a monotone interpolation
-table over the normal design range 0.15% to 0.60% reinforcement. Internal
-compressive stress remains a compatibility estimate, and the volume-surface
-ratio still needs a separate shrinkage-threshold digitization for a complete
-full-compensation check.
+table over the normal design range 0.15% to 0.60% reinforcement. Full
+compensation and compressive stress checks are then completed with digitized
+Fig. 9.3 and Fig. 9.4 interpolation surfaces.
 """
 
 from __future__ import annotations
@@ -159,6 +158,12 @@ class ShrinkageCompensatingResult:
 
     design: ShrinkageCompensatingDesign
 
+    validation_status: str
+    """Validation basis: digitized."""
+
+    model_basis: str
+    """Short description of the governing Appendix 5 / Fig. 9.3 / Fig. 9.4 lookups."""
+
     rho_ok: bool
     """True if reinforcement ratio is within 0.0015–0.006."""
 
@@ -181,11 +186,7 @@ class ShrinkageCompensatingResult:
     """True if the estimated slab expansion exceeds the digitized threshold."""
 
     internal_compressive_stress_psi: float
-    """Estimated internal compressive stress from expansion, psi.
-
-    Simplified estimate: σ = ε_slab × E_s × ρ / (1 + n*ρ)
-    The exact value requires Fig. 9.4 chart lookup in ACI 360R-10.
-    """
+    """Estimated internal compressive stress from the digitized Fig. 9.4 lookup, psi."""
 
     reinforcement_depth_in: float
     """Recommended steel depth from top = h/3, in.  (ACI 360R-10 §9.3.3)."""
@@ -472,7 +473,7 @@ def design_shrinkage_compensating(
             f"for V/S = {design.volume_surface_ratio:.2f}"
         ),
         f"Estimated internal compressive stress ≈ {sigma_c:.0f} psi",
-        "  (Approximate – verify with ACI 360R-10 Fig. 9.4 chart lookup)",
+        "  (Digitized Fig. 9.4 interpolation table)",
         f"Isolation joint width = {jw:.3f} in "
         f"({'one end' if design.expansion_at_one_end else 'two ends'} expansion)",
         f"  Use {math.ceil(jw * 4) / 4:.2f} in (rounded up to nearest 1/4 in)",
@@ -485,6 +486,11 @@ def design_shrinkage_compensating(
 
     return ShrinkageCompensatingResult(
         design=design,
+        validation_status="digitized",
+        model_basis=(
+            "Appendix 5 calibrated member-expansion lookup with digitized "
+            "ACI 360R-10 Fig. 9.3 and Fig. 9.4 interpolation surfaces"
+        ),
         rho_ok=rho_ok,
         prism_ok=prism_ok,
         isolation_joint_width_in=jw,

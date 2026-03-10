@@ -104,6 +104,8 @@ class TestPCAWheelLoad:
         result = design_for_wheel_load(load, concrete, subgrade, safety_factor=1.7)
         assert result.method == DesignMethod.PCA
         assert result.load_case == LoadCase.INTERIOR
+        assert result.validation_status == "approximate"
+        assert "secondary-wheel superposition" in result.model_basis
 
 
 # ---------------------------------------------------------------------------
@@ -227,6 +229,8 @@ class TestWRIWheelLoad:
         )
         assert result.method == DesignMethod.WRI
         assert result.load_case == LoadCase.INTERIOR
+        assert result.validation_status == "fitted"
+        assert "Appendix A2.2 calibrated fit" in result.model_basis
         assert abs(result.required_thickness_in - 7.875) < 0.35
 
 

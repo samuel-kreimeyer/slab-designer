@@ -93,6 +93,10 @@ def _print_design_result(result: Any, title: str) -> None:
 
     table.add_row("Method", result.method.value)
     table.add_row("Load case", result.load_case.value)
+    if hasattr(result, "validation_status"):
+        table.add_row("Validation status", result.validation_status)
+    if hasattr(result, "model_basis"):
+        table.add_row("Model basis", result.model_basis)
     table.add_row(
         "Required thickness",
         f"{result.required_thickness_in:.2f} in  "
@@ -272,6 +276,10 @@ def frc(
     table.add_column("Parameter", style="bold cyan")
     table.add_column("Value")
     table.add_row("Method", result.method)
+    if hasattr(result, "validation_status"):
+        table.add_row("Validation status", result.validation_status)
+    if hasattr(result, "model_basis"):
+        table.add_row("Model basis", result.model_basis)
     table.add_row("Re,3", f"{result.re3:.1f} %")
     table.add_row("M₀", f"{result.M0_inlb_per_in:.0f} in·lb/in")
     if result.h_in:
@@ -324,6 +332,8 @@ def pt(
     table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
     table.add_column("Parameter", style="bold cyan")
     table.add_column("Value")
+    table.add_row("Validation status", result.validation_status)
+    table.add_row("Model basis", result.model_basis)
     table.add_row("Slab length", f"{length:.0f} ft")
     table.add_row("Slab thickness", f"{thickness:.1f} in")
     table.add_row("Residual prestress fp", f"{result.fp_psi:.0f} psi")

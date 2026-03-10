@@ -145,6 +145,8 @@ class TestFRCElasticMethod:
             safety_factor=1.5,
         )
         assert result.method == "elastic"
+        assert result.validation_status == "equation-based"
+        assert "Chapter 11 elastic method" in result.model_basis
         assert result.h_in > 0
         assert result.allowable_stress_psi is not None
 
@@ -251,6 +253,8 @@ class TestYieldLineDesignCheck:
             additional_moment_inlb_per_in=1200.0,
         )
         assert result.method == "yield_line"
+        assert result.validation_status == "equation-based"
+        assert "yield-line capacity equations" in result.model_basis
         assert result.P_allowable_lb is not None
 
     def test_re3_inverse_interior(

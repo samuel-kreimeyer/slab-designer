@@ -133,6 +133,12 @@ class PostTensionedResult:
 
     design: PostTensionedDesign
 
+    validation_status: str
+    """Validation basis: equation-based."""
+
+    model_basis: str
+    """Short description of the governing Chapter 10 force-balance model."""
+
     Pr_lb_ft: float
     """PT force required to overcome subgrade friction, lb/ft.  Eq. (10-1)."""
 
@@ -277,6 +283,11 @@ def design_post_tensioned(design: PostTensionedDesign) -> PostTensionedResult:
 
     return PostTensionedResult(
         design=design,
+        validation_status="equation-based",
+        model_basis=(
+            "ACI 360R-10 Eq. (10-1) and Eq. (10-2) strip-force balance for "
+            "friction and residual precompression"
+        ),
         Pr_lb_ft=Pr,
         fp_psi=fp,
         required_force_lb_ft=required_force_lb_ft,

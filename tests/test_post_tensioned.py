@@ -78,6 +78,8 @@ class TestEq10_1:
         result = design_post_tensioned(design)
         # Wslab = (6/12) × 150 = 75 lb/ft², and Eq. (A4-1) uses L / 2
         expected_Pr = 0.5 * 75.0 * 500.0 / 2.0  # = 9,375 lb/ft
+        assert result.validation_status == "equation-based"
+        assert "Eq. (10-1) and Eq. (10-2)" in result.model_basis
         assert abs(result.Pr_lb_ft - expected_Pr) < 10.0, (
             f"Pr = {result.Pr_lb_ft:.1f} lb/ft (expected {expected_Pr:.1f})"
         )

@@ -4,25 +4,33 @@ Concrete slab-on-ground design utilities and CLI built around ACI 360R-10 refere
 
 ## Status
 
-This project is usable as an engineering prototype.
+This project is usable as an engineering prototype with most core methods now implemented.
 
 - Core library and CLI are implemented.
-- The automated test suite covers the current formulas and examples.
-- Several methods still rely on approximations where the source PDF could not be fully decoded.
+- The automated test suite covers decoded equations, digitized charts, and appendix-style examples.
+- The remaining risk is validation depth, not missing core method coverage.
 
 Current high-confidence areas:
 
 - Westergaard interior and edge stress checks
-- PCA-style wheel and rack-post thickness iteration
 - COE edge/joint load checks
-- Post-tensioned friction and strip-force spacing balance
-- Shrinkage-compensating joint-width calculations
+- FRC elastic and yield-line checks from Chapter 11 / Appendix 6
+- Post-tensioned Eq. (10-1) / Eq. (10-2) friction and strip-force spacing balance
+- Shrinkage-compensating joint-width, expansion, full-compensation, and compressive-stress lookups
+- WRI wheel-load design calibrated to Appendix A2.2
 
 Current limitations:
 
-- True WRI wheel-load chart design is not implemented.
-- Some Chapter 7, 9, and 11 paths use documented approximations instead of exact ACI equations.
+- Some PCA wheel and rack interaction effects remain chart-tracking approximations rather than fully decoded published equations.
+- Shrinkage-compensating and WRI methods are implemented through digitized tables or calibrated fits, which matches practice but is not the same as a published closed-form equation.
 - This should not be treated as sealed-for-issue design software without independent validation.
+
+## Validation Basis
+
+- `equation-based`: decoded ACI equations or direct Westergaard relationships.
+- `digitized`: values interpolated from ACI figures after manual digitization.
+- `fitted`: calibrated curve fit tied to a published appendix example.
+- `approximate`: analytical shortcut intended to track chart behavior but not directly published as a standalone equation.
 
 ## Install
 
@@ -52,6 +60,6 @@ pytest
 
 ## Roadmap
 
-- Replace remaining approximate equations with validated ACI-backed implementations.
-- Add true WRI wheel-load support or remove the claim entirely from public docs.
-- Expand user-facing documentation with worked appendix examples and engineering assumptions.
+- Expand appendix-driven end-to-end validation coverage across the CLI and public API.
+- Document method-by-method validation status and engineering assumptions in more detail.
+- Add interface layers once the remaining validation set is broad enough to support them safely.
