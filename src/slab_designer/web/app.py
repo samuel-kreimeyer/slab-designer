@@ -505,11 +505,46 @@ _HTML = """<!doctype html>
     }
     .tool-stack {
       display: grid;
-      gap: 18px;
+      gap: 14px;
+      align-content: start;
+    }
+    .tab-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 8px;
+      background: rgba(255, 252, 246, 0.72);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .tab-button {
+      margin: 0;
+      padding: 10px 14px;
+      border: 1px solid transparent;
+      border-radius: 14px;
+      background: transparent;
+      color: var(--muted);
+      box-shadow: none;
+    }
+    .tab-button:hover {
+      transform: none;
+      background: rgba(197, 95, 57, 0.08);
+    }
+    .tab-button.active {
+      background: linear-gradient(135deg, var(--ink), #214a73);
+      color: white;
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 12px 24px rgba(16, 36, 62, 0.14);
     }
     .tool {
       padding: 22px;
       animation: rise 0.35s ease;
+      display: none;
+    }
+    .tool.active {
+      display: block;
     }
     .tool-header {
       display: flex;
@@ -703,7 +738,15 @@ _HTML = """<!doctype html>
 
     <section class="workspace">
       <div class="tool-stack">
-        <form class="tool" data-endpoint="/api/wheel">
+        <div class="tab-bar" role="tablist" aria-label="Design workflows">
+          <button class="tab-button active" type="button" data-tab-target="wheel">Wheel</button>
+          <button class="tab-button" type="button" data-tab-target="rack">Rack</button>
+          <button class="tab-button" type="button" data-tab-target="uniform">Uniform</button>
+          <button class="tab-button" type="button" data-tab-target="frc">FRC</button>
+          <button class="tab-button" type="button" data-tab-target="pt">PT</button>
+          <button class="tab-button" type="button" data-tab-target="shrinkage">Shrinkage</button>
+        </div>
+        <form class="tool active" data-tab-panel="wheel" data-endpoint="/api/wheel">
           <div class="tool-header">
             <h2>Wheel Load</h2>
             <span class="badge">PCA / WRI / COE</span>
@@ -728,7 +771,7 @@ _HTML = """<!doctype html>
           <button type="submit">Run wheel design</button>
         </form>
 
-        <form class="tool" data-endpoint="/api/rack">
+        <form class="tool" data-tab-panel="rack" data-endpoint="/api/rack">
           <div class="tool-header">
             <h2>Rack Post</h2>
             <span class="badge">PCA</span>
@@ -744,7 +787,7 @@ _HTML = """<!doctype html>
           <button type="submit">Run rack design</button>
         </form>
 
-        <form class="tool" data-endpoint="/api/uniform">
+        <form class="tool" data-tab-panel="uniform" data-endpoint="/api/uniform">
           <div class="tool-header">
             <h2>Uniform / Aisle</h2>
             <span class="badge">Chapter 7</span>
@@ -758,7 +801,7 @@ _HTML = """<!doctype html>
           <button type="submit">Run uniform design</button>
         </form>
 
-        <form class="tool" data-endpoint="/api/frc">
+        <form class="tool" data-tab-panel="frc" data-endpoint="/api/frc">
           <div class="tool-header">
             <h2>Fiber-Reinforced Concrete</h2>
             <span class="badge">Elastic / yield-line</span>
@@ -789,7 +832,7 @@ _HTML = """<!doctype html>
           <button type="submit">Run FRC design</button>
         </form>
 
-        <form class="tool" data-endpoint="/api/pt">
+        <form class="tool" data-tab-panel="pt" data-endpoint="/api/pt">
           <div class="tool-header">
             <h2>Post-Tensioned</h2>
             <span class="badge">Eq. 10-1 / 10-2</span>
@@ -813,7 +856,7 @@ _HTML = """<!doctype html>
           <button type="submit">Run PT design</button>
         </form>
 
-        <form class="tool" data-endpoint="/api/shrinkage">
+        <form class="tool" data-tab-panel="shrinkage" data-endpoint="/api/shrinkage">
           <div class="tool-header">
             <h2>Shrinkage-Compensating</h2>
             <span class="badge">Digitized charts</span>
@@ -855,6 +898,17 @@ _HTML = """<!doctype html>
 
   <script>
     const resultPanel = document.getElementById("result-panel");
+    const tabButtons = document.querySelectorAll("[data-tab-target]");
+    const tabPanels = document.querySelectorAll("[data-tab-panel]");
+
+    function activateTab(name) {
+      tabButtons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.tabTarget === name);
+      });
+      tabPanels.forEach((panel) => {
+        panel.classList.toggle("active", panel.dataset.tabPanel === name);
+      });
+    }
 
     function parseForm(form) {
       const data = {};
@@ -939,6 +993,10 @@ _HTML = """<!doctype html>
       const button = form.querySelector("button");
       button.dataset.label = button.textContent;
       form.addEventListener("submit", submitForm);
+    });
+
+    tabButtons.forEach((button) => {
+      button.addEventListener("click", () => activateTab(button.dataset.tabTarget));
     });
   </script>
 </body>
