@@ -53,6 +53,15 @@ slab-designer pt --length 500 --thickness 6 --pe 26000 --k 150
 slab-designer analyze --load 11200 --contact 25 --h 7.75 --k 200
 ```
 
+## Web
+
+```bash
+pip install -e .[dev,web]
+slab-designer-web
+```
+
+Then open `http://127.0.0.1:8000`.
+
 ## Development
 
 ```bash
