@@ -32,6 +32,8 @@ Current limitations:
 - `fitted`: calibrated curve fit tied to a published appendix example.
 - `approximate`: analytical shortcut intended to track chart behavior but not directly published as a standalone equation.
 
+Method-by-method status lives in [docs/validation-matrix.md](/home/sam/Projects/slab-designer/docs/validation-matrix.md).
+
 ## Install
 
 ```bash
