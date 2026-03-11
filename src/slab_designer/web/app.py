@@ -582,6 +582,53 @@ _HTML = """<!doctype html>
       font-size: 13px;
       color: var(--muted);
     }
+    .field-label {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      color: var(--ink);
+      cursor: help;
+      outline: none;
+    }
+    .field-label::after {
+      content: "i";
+      display: inline-grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      background: rgba(197, 95, 57, 0.12);
+      border: 1px solid rgba(197, 95, 57, 0.18);
+    }
+    .field-label::before {
+      content: attr(data-tip);
+      position: absolute;
+      left: 0;
+      bottom: calc(100% + 10px);
+      width: min(290px, 72vw);
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(16, 36, 62, 0.96);
+      color: #f8f3eb;
+      font-size: 12px;
+      line-height: 1.5;
+      box-shadow: 0 14px 30px rgba(16, 36, 62, 0.2);
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.16s ease, transform 0.16s ease;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .field-label:hover::before,
+    .field-label:focus-visible::before {
+      opacity: 1;
+      transform: translateY(0);
+    }
     input, select {
       width: 100%;
       border: 1px solid var(--line);
@@ -752,15 +799,15 @@ _HTML = """<!doctype html>
             <span class="badge">PCA / WRI / COE</span>
           </div>
           <div class="grid">
-            <label>Axle load (lb)<input name="axle_load_lb" type="number" value="22400" step="100"></label>
-            <label>Contact area (in2)<input name="contact_area_in2" type="number" value="25" step="0.1"></label>
-            <label>Wheel spacing (in)<input name="wheel_spacing_in" type="number" value="40" step="0.1"></label>
-            <label>Subgrade k (pci)<input name="k" type="number" value="200" step="1"></label>
-            <label>Modulus of rupture fr (psi)<input name="fr" type="number" value="570" step="1"></label>
-            <label>Safety factor<input name="sf" type="number" value="1.7" step="0.1"></label>
-            <label>Elastic modulus E (psi)<input name="E" type="number" value="4000000" step="1000"></label>
-            <label>Poisson's ratio<input name="nu" type="number" value="0.15" step="0.01"></label>
-            <label>Method
+            <label><span class="field-label" tabindex="0" data-tip="Total axle load shared by two wheels. Typical forklift example: 22,400 lb for PCA or 14,600 lb for the Appendix A2.2 WRI case.">Axle load (lb)</span><input name="axle_load_lb" type="number" value="22400" step="100"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Tire contact area per wheel. Use the effective contact patch, not tread width. Typical values: 25 in2 to 28 in2.">Contact area (in2)</span><input name="contact_area_in2" type="number" value="25" step="0.1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Center-to-center spacing between the two wheels on the axle. Typical values: 40 in to 45 in.">Wheel spacing (in)</span><input name="wheel_spacing_in" type="number" value="40" step="0.1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Modulus of subgrade reaction. Typical warehouse slabs often fall around 100 pci to 200 pci; strong support can be 400 pci.">Subgrade k (pci)</span><input name="k" type="number" value="200" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Concrete modulus of rupture used for flexural design. Typical ACI example value: 570 psi.">Modulus of rupture fr (psi)</span><input name="fr" type="number" value="570" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Factor of safety applied to fr. Typical wheel-load range: 1.7 to 2.0.">Safety factor</span><input name="sf" type="number" value="1.7" step="0.1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Concrete elastic modulus. Typical default: 4,000,000 psi. WRI Appendix A2.2 uses 3,000,000 psi.">Elastic modulus E (psi)</span><input name="E" type="number" value="4000000" step="1000"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Poisson's ratio for the slab. Typical concrete assumption: 0.15.">Poisson's ratio</span><input name="nu" type="number" value="0.15" step="0.01"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Choose the design workflow. PCA is approximate, WRI is an Appendix A2.2 calibrated fit, and COE uses the edge/joint procedure.">Method</span>
               <select name="method">
                 <option value="pca">PCA</option>
                 <option value="wri">WRI</option>
@@ -777,12 +824,12 @@ _HTML = """<!doctype html>
             <span class="badge">PCA</span>
           </div>
           <div class="grid">
-            <label>Post load (lb)<input name="post_load_lb" type="number" value="15500" step="100"></label>
-            <label>Base plate area (in2)<input name="base_plate_area_in2" type="number" value="36" step="0.1"></label>
-            <label>Long spacing (in)<input name="long_spacing_in" type="number" value="100" step="1"></label>
-            <label>Short spacing (in)<input name="short_spacing_in" type="number" value="40" step="1"></label>
-            <label>Subgrade k (pci)<input name="k" type="number" value="100" step="1"></label>
-            <label>Modulus of rupture fr (psi)<input name="fr" type="number" value="570" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Service load on one rack post. Typical Appendix A1.3 value: 15,500 lb.">Post load (lb)</span><input name="post_load_lb" type="number" value="15500" step="100"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Loaded bearing area of the base plate. Typical example: 36 in2.">Base plate area (in2)</span><input name="base_plate_area_in2" type="number" value="36" step="0.1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Rack spacing in the long direction. Typical example: 100 in.">Long spacing (in)</span><input name="long_spacing_in" type="number" value="100" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Rack spacing in the short direction. Typical example: 40 in.">Short spacing (in)</span><input name="short_spacing_in" type="number" value="40" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Modulus of subgrade reaction. Appendix A1.3 uses 100 pci.">Subgrade k (pci)</span><input name="k" type="number" value="100" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Concrete modulus of rupture. Typical example value: 570 psi.">Modulus of rupture fr (psi)</span><input name="fr" type="number" value="570" step="1"></label>
           </div>
           <button type="submit">Run rack design</button>
         </form>
@@ -793,10 +840,10 @@ _HTML = """<!doctype html>
             <span class="badge">Chapter 7</span>
           </div>
           <div class="grid">
-            <label>Uniform load (psf)<input name="intensity_psf" type="number" value="500" step="10"></label>
-            <label>Aisle width (ft)<input name="aisle_width_ft" type="number" value="10" step="0.1"></label>
-            <label>Subgrade k (pci)<input name="k" type="number" value="100" step="1"></label>
-            <label>Modulus of rupture fr (psi)<input name="fr" type="number" value="570" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Uniform floor loading applied on both sides of the clear aisle. Typical industrial storage case: 500 psf.">Uniform load (psf)</span><input name="intensity_psf" type="number" value="500" step="10"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Clear aisle width between loaded areas. Typical example input: 10 ft.">Aisle width (ft)</span><input name="aisle_width_ft" type="number" value="10" step="0.1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Modulus of subgrade reaction supporting the slab. Common design range: 100 pci to 200 pci.">Subgrade k (pci)</span><input name="k" type="number" value="100" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Concrete modulus of rupture. Typical value: 570 psi.">Modulus of rupture fr (psi)</span><input name="fr" type="number" value="570" step="1"></label>
           </div>
           <button type="submit">Run uniform design</button>
         </form>
@@ -807,27 +854,27 @@ _HTML = """<!doctype html>
             <span class="badge">Elastic / yield-line</span>
           </div>
           <div class="grid">
-            <label>Load (lb)<input name="load_lb" type="number" value="15000" step="100"></label>
-            <label>Contact area (in2)<input name="contact_area_in2" type="number" value="24" step="0.1"></label>
-            <label>Subgrade k (pci)<input name="k" type="number" value="100" step="1"></label>
-            <label>Re,3 (%)<input name="re3" type="number" value="55" step="0.1"></label>
-            <label>Modulus of rupture fr (psi)<input name="fr" type="number" value="550" step="1"></label>
-            <label>Method
+            <label><span class="field-label" tabindex="0" data-tip="Applied concentrated load. Appendix 6 uses 15,000 lb.">Load (lb)</span><input name="load_lb" type="number" value="15000" step="100"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Loaded bearing area under the wheel or post. Appendix 6 uses 24 in2.">Contact area (in2)</span><input name="contact_area_in2" type="number" value="24" step="0.1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Modulus of subgrade reaction. Appendix 6 uses 100 pci.">Subgrade k (pci)</span><input name="k" type="number" value="100" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Residual strength factor for the selected fiber system. Typical investigated values: 30% to 60%.">Re,3 (%)</span><input name="re3" type="number" value="55" step="0.1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Plain-concrete modulus of rupture before fiber enhancement. Appendix 6 uses 550 psi.">Modulus of rupture fr (psi)</span><input name="fr" type="number" value="550" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Elastic finds required thickness. Yield-line checks a given slab thickness using Chapter 11 / Appendix 6 capacity equations.">Method</span>
               <select name="method">
                 <option value="elastic">elastic</option>
                 <option value="yield_line">yield_line</option>
               </select>
             </label>
-            <label>Case
+            <label><span class="field-label" tabindex="0" data-tip="Load position for the yield-line check. Interior usually has the highest capacity; corner the lowest.">Case</span>
               <select name="case">
                 <option value="interior">interior</option>
                 <option value="edge">edge</option>
                 <option value="corner">corner</option>
               </select>
             </label>
-            <label>Thickness h (in)<input name="h_in" type="number" value="6" step="0.1"></label>
-            <label>Joint transfer<input name="joint_transfer" type="number" value="0.2" step="0.05"></label>
-            <label>Shrinkage moment (in-lb/in)<input name="additional_moment_inlb_per_in" type="number" value="1200" step="50"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Required only for yield-line mode. Appendix 6 checks use 6 in.">Thickness h (in)</span><input name="h_in" type="number" value="6" step="0.1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Fraction of load transferred across an edge joint. Appendix 6 edge example uses 0.20.">Joint transfer</span><input name="joint_transfer" type="number" value="0.2" step="0.05"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Locked-in shrinkage or curling moment deducted from yield-line capacity. Appendix 6 uses 1,200 in-lb/in.">Shrinkage moment (in-lb/in)</span><input name="additional_moment_inlb_per_in" type="number" value="1200" step="50"></label>
           </div>
           <button type="submit">Run FRC design</button>
         </form>
@@ -838,13 +885,13 @@ _HTML = """<!doctype html>
             <span class="badge">Eq. 10-1 / 10-2</span>
           </div>
           <div class="grid">
-            <label>Slab length (ft)<input name="slab_length_ft" type="number" value="500" step="1"></label>
-            <label>Thickness (in)<input name="slab_thickness_in" type="number" value="6" step="0.1"></label>
-            <label>Tendon force Pe (lb)<input name="Pe" type="number" value="26000" step="100"></label>
-            <label>Subgrade k (pci)<input name="k" type="number" value="150" step="1"></label>
-            <label>Residual prestress fp (psi)<input name="fp" type="number" value="250" step="1"></label>
-            <label>Friction mu<input name="mu" type="number" value="0.5" step="0.05"></label>
-            <label>Slip sheet
+            <label><span class="field-label" tabindex="0" data-tip="Panel length in the PT direction. Appendix A4.1 uses 500 ft.">Slab length (ft)</span><input name="slab_length_ft" type="number" value="500" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Trial slab thickness for the PT strip. Appendix A4.1 uses 6 in.">Thickness (in)</span><input name="slab_thickness_in" type="number" value="6" step="0.1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Effective tendon force after losses. Appendix A4.1 uses 26,000 lb.">Tendon force Pe (lb)</span><input name="Pe" type="number" value="26000" step="100"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Subgrade support used for the radius-of-stiffness check. Typical default: 150 pci.">Subgrade k (pci)</span><input name="k" type="number" value="150" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Residual average precompression target. Appendix A4.1 uses 250 psi; leave blank to use the Table 10.1 recommendation.">Residual prestress fp (psi)</span><input name="fp" type="number" value="250" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Coefficient of subgrade friction. Typical PT example value: 0.5. Two polyethylene sheets often justify 0.30.">Friction mu</span><input name="mu" type="number" value="0.5" step="0.05"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Slip membrane condition affecting the friction force. Typical options: none, one polyethylene sheet, or two sheets.">Slip sheet</span>
               <select name="slip_sheet">
                 <option value="none">none</option>
                 <option value="one_poly">one_poly</option>
@@ -852,7 +899,7 @@ _HTML = """<!doctype html>
               </select>
             </label>
           </div>
-          <label class="checkline"><input name="industrial" type="checkbox" checked>Industrial floor guidance</label>
+          <label class="checkline"><input name="industrial" type="checkbox" checked><span class="field-label" tabindex="0" data-tip="Use industrial-floor residual prestress guidance from Table 10.1. Leave checked for most warehouse or plant slabs.">Industrial floor guidance</span></label>
           <button type="submit">Run PT design</button>
         </form>
 
@@ -862,14 +909,14 @@ _HTML = """<!doctype html>
             <span class="badge">Digitized charts</span>
           </div>
           <div class="grid">
-            <label>Thickness (in)<input name="slab_thickness_in" type="number" value="6" step="0.1"></label>
-            <label>Length (ft)<input name="slab_length_ft" type="number" value="100" step="1"></label>
-            <label>Width (ft)<input name="slab_width_ft" type="number" value="12" step="1"></label>
-            <label>Prism expansion (%)<input name="prism_expansion_pct" type="number" value="0.05" step="0.001"></label>
-            <label>Reinforcement ratio rho<input name="rho" type="number" value="0.00241" step="0.00001"></label>
-            <label>V/S ratio<input name="volume_surface_ratio" type="number" value="6.0" step="0.1"></label>
-            <label>Subgrade k (pci)<input name="k" type="number" value="100" step="1"></label>
-            <label>Slip sheet
+            <label><span class="field-label" tabindex="0" data-tip="Slab thickness used for the shrinkage-compensating checks. Appendix 5 example uses 6 in.">Thickness (in)</span><input name="slab_thickness_in" type="number" value="6" step="0.1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Panel length in the expansion direction. Appendix 5 uses 100 ft joint spacing.">Length (ft)</span><input name="slab_length_ft" type="number" value="100" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Panel width. This affects the summary but not the core expansion lookup directly. Typical placeholder: 12 ft.">Width (ft)</span><input name="slab_width_ft" type="number" value="12" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="ASTM C878 restrained prism expansion. ACI minimum is 0.03%; Appendix 5 example uses 0.05%.">Prism expansion (%)</span><input name="prism_expansion_pct" type="number" value="0.05" step="0.001"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Distributed reinforcement ratio in each direction. Appendix 5 anchor values include 0.00182 and 0.00241.">Reinforcement ratio rho</span><input name="rho" type="number" value="0.00241" step="0.00001"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Volume-to-surface ratio for drying. A 6 in slab drying from the top only uses V/S = 6.0.">V/S ratio</span><input name="volume_surface_ratio" type="number" value="6.0" step="0.1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Subgrade support. Typical example default: 100 pci.">Subgrade k (pci)</span><input name="k" type="number" value="100" step="1"></label>
+            <label><span class="field-label" tabindex="0" data-tip="Slip membrane condition for friction restraint. Appendix 5 uses two polyethylene sheets.">Slip sheet</span>
               <select name="slip_sheet">
                 <option value="two_poly">two_poly</option>
                 <option value="one_poly">one_poly</option>
@@ -877,7 +924,7 @@ _HTML = """<!doctype html>
               </select>
             </label>
           </div>
-          <label class="checkline"><input name="expansion_at_one_end" type="checkbox" checked>Expansion at one end only</label>
+          <label class="checkline"><input name="expansion_at_one_end" type="checkbox" checked><span class="field-label" tabindex="0" data-tip="Use the conservative one-end expansion assumption for joint-width sizing. Clear it if the slab can expand toward two free ends.">Expansion at one end only</span></label>
           <button type="submit">Run shrinkage design</button>
         </form>
       </div>
